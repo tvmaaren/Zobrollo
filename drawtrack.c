@@ -1,3 +1,23 @@
+/*
+Zobrollo is a 2d minimalistic top-view racing game
+Copyright (C) 2021  Thomas van Maaren
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+long with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+e-mail:thomas.v.maaren@outlook.com
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -7,6 +27,7 @@
 #include <math.h>
 
 #include "drawtrack.h"
+#include "misc.h"
 
 
 typedef struct{
@@ -25,26 +46,17 @@ void cart2pol(float x, float y, float *angle, float *dist){
 	if(x<0)*angle+=M_PI;
 }
 
-void prerror(FILE *file, char *message, int line_number){
-	fprintf(stderr, "%s: %s on line %d\n", message, line_number);
+void prerror(ALLEGRO_FILE *file, char *message, int line_number){
+	fprintf(stderr, "%s on line %d of the track file\n", message, line_number);
 	exit(1);
 }
 
-//Adds ten elements to the list if this is necessary.
-void add_element(void** list, int *required, int *available, size_t element_size){
-	(*required)++;
-	if(*required>*available){
-		(*available)+=10;
-		*list = realloc(*list,*available*element_size);
-	}
-	return;
-}
 
 //Gets the next word in the file. It also gives the line number that it is currently on
 //returns 0 if it didn't hit a newline or end of file
 //returns 1 if it hit at least one newline before hitting a word
 //returns 2 if it hit end of the file before hitting a word
-int getword(FILE *file, char**pword, int*pline_num){
+int getword(ALLEGRO_FILE *file, char**pword, int*pline_num){
 	int ret=0;
 	
 	int word_len=0;
@@ -53,13 +65,13 @@ int getword(FILE *file, char**pword, int*pline_num){
 
 	_Bool start_word=false;
 	while(true){
-		int ch = getc(file);
+		int ch = al_fgetc(file);
 		if(ch=='\n'){
 			if(start_word){
-				//It seeks backwards as it is necessary to
+				//It undoes the getc as it is necessary to
 				//check if a \n happened before the word.
-				//We don't really if it happened after.
-				fseek(file, -1, SEEK_CUR);
+				//We don't really need to know if it happened after.
+				al_fungetc(file, ch);
 				break;
 			}else{
 				ret=1;
@@ -81,7 +93,7 @@ int getword(FILE *file, char**pword, int*pline_num){
 	(*pword)[word_len-1]='\0';
 	return ret;
 }
-int getnum(FILE *file, float*pnum, int*line_num){
+int getnum(ALLEGRO_FILE *file, float*pnum, int*line_num){
 	int ret;
 	char *word;
 	ret = getword(file, &word, line_num);
@@ -94,7 +106,7 @@ int getnum(FILE *file, float*pnum, int*line_num){
 }
 
 
-int GetSimpleSegments(void*** segments, _Bool** segment_types, float* ptrackwidth, FILE *file){
+int GetSimpleSegments(void*** segments, _Bool** segment_types, float* ptrackwidth, ALLEGRO_FILE *file){
 	
 	int line_num=1;
 
@@ -171,7 +183,7 @@ int GetSimpleSegments(void*** segments, _Bool** segment_types, float* ptrackwidt
 		segment_i++;
 	}
 }
-void loadtrack(FILE* file, TRACK_DATA* track_data){
+void loadtrack(ALLEGRO_FILE* file, TRACK_DATA* track_data){
 		void ** simple_segments;
 		track_data->n_segments = GetSimpleSegments(&simple_segments, 
 				&(track_data->segment_types), &(track_data->trackwidth), file);
@@ -287,8 +299,6 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 	//less than 2 pixels after it has been transformed
 	if(track_data.border_width*scale<1)
 		track_data.border_width=1/scale;
- 	printf("pixels = %f\n", track_data.border_width*scale);
-	printf("border width = %f\n", track_data.border_width);
 	
 	//finish line
 	al_draw_line(-track_data.trackwidth/2,0,track_data.trackwidth/2,0, track_data.border_color, 
