@@ -48,4 +48,4 @@ The main menu
 The example track
 ![](screenshots/example.png)
 The Long Straight track
-![](screenshots/Long Straight.png)
+![](screenshots/Long\ Straight.png)
