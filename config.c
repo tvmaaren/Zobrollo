@@ -51,6 +51,7 @@ void get_config(CONFIG* config){
 	config->accelleration= 	atof(al_get_config_value(cfg, "kart", "accelleration"));
 	config->back_accelleration=atof(al_get_config_value(cfg,"kart", "back_accelleration"));
 	config->break_speed= 	atof(al_get_config_value(cfg,"kart", "break_speed"));
+	config->speed_decrease= atof(al_get_config_value(cfg,"kart", "speed_decrease"));
 	config->death_crash= 	atof(al_get_config_value(cfg,"kart", "death_crash"));
 
 	config->max_wheel_angle= atof(al_get_config_value(cfg,"kart", "max_wheel_angle"));

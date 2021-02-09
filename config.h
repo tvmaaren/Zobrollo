@@ -18,6 +18,7 @@ typedef struct{
 	float	accelleration;
 	float	back_accelleration;
 	float	break_speed;
+	float	speed_decrease;
 	float	death_crash;
 
 	float	max_wheel_angle;

@@ -25,7 +25,6 @@ e-mail:thomas.v.maaren@outlook.com
 
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro5.h>
-#include <allegro5/allegro_audio.h>
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
@@ -34,7 +33,7 @@ e-mail:thomas.v.maaren@outlook.com
 #include "race.h"
 #include "misc.h"
 
-#define version "0.1.0"
+#define version "0.1.1"
 
 #define thickness 2
 
@@ -70,27 +69,7 @@ void main(){
 	must_init(al_install_keyboard(),"couldn't initialize keyboard\n");
 	must_init(al_init_primitives_addon(), "primitives");
 	
-	//set up audio
-	must_init(al_install_audio(), "audio");
-	al_reserve_samples(1);
-	
-	int audio_freq = 44100;
-	float kart_sample_len_sec = 1.0/20.0;
-	
-	ALLEGRO_AUDIO_STREAM* audio_stream = al_create_audio_stream(2, audio_freq*kart_sample_len_sec, audio_freq, 
-			ALLEGRO_AUDIO_DEPTH_FLOAT32, ALLEGRO_CHANNEL_CONF_1);
-	if(audio_stream==NULL)
-		printf("Could not create a stream\n");
-	if(!al_attach_audio_stream_to_mixer(audio_stream, al_get_default_mixer()))
-		printf("Could not attach audio stream to mixer\n");
-	if(!al_set_audio_stream_playing(audio_stream, true))
-		printf("Could not play audio stream\n");
-	al_set_audio_stream_playmode(audio_stream, ALLEGRO_PLAYMODE_ONCE);
-	
-	
 	must_init(al_init_image_addon(), "image");
-	ALLEGRO_BITMAP* full_heart = al_load_bitmap("full heart.png");
-	ALLEGRO_BITMAP* half_heart = al_load_bitmap("half heart.png");
 
 	//get a list of track names
 	ALLEGRO_FS_ENTRY *track_dir = al_create_fs_entry("tracks");
@@ -130,6 +109,7 @@ void main(){
 	must_init(al_init_font_addon(), "font addon");
 	must_init(al_init_ttf_addon(), "ttf");
 	ALLEGRO_FONT* font =  al_create_builtin_font();
+	must_init(font, "builtin font");
 
 	if(font==NULL){
 		fprintf(stderr, "Could not load font\n");
@@ -162,26 +142,15 @@ void main(){
 	memset(key, 0, sizeof(key));
 
 	_Bool first = true;
+	
+	int screen_width;
+	int screen_height;
+
+	_Bool back_from_race = false;
 
 	while(true){
-		_Bool click = false;
 		al_acknowledge_resize(disp);
-		int screen_width = al_get_display_width(disp);
-		int screen_height = al_get_display_height(disp);
-		i=0;
-		while(i<am_tracks){
-			float y_centre = screen_height/(am_tracks+1)*(i+1);
-			
-			track_box[i].font =get_font(config.font_name, screen_width, screen_height);
-
-			track_box[i].x1=screen_width/4;
-			track_box[i].y1=y_centre-screen_height/(am_tracks+1)/2;
-			track_box[i].x2=screen_width/4*3;
-			track_box[i].y2=y_centre+screen_height/(am_tracks+1)/2;
-			i++;
-		}
-		ALLEGRO_MOUSE_STATE mouse_state;
-		al_get_mouse_state(&mouse_state);
+		_Bool click = false;
 		_Bool EndProgram=false;
 		switch(event.type){
 			case(ALLEGRO_EVENT_DISPLAY_CLOSE):
@@ -192,35 +161,62 @@ void main(){
 				break;
 			case(ALLEGRO_EVENT_KEY_DOWN):
 				if(ALLEGRO_KEY_F11==event.keyboard.keycode){
-					al_set_display_flag(disp, ALLEGRO_FULLSCREEN_WINDOW, !(_Bool)(al_get_display_flags(disp) & ALLEGRO_FULLSCREEN_WINDOW));
+					al_set_display_flag(disp, ALLEGRO_FULLSCREEN_WINDOW, 
+						!(_Bool)(al_get_display_flags(disp) & ALLEGRO_FULLSCREEN_WINDOW));
 					first = true;//it must then redraw the boxes
 				}
 						
 				break;
- 
-				
 		}
+		if(event.type == ALLEGRO_EVENT_DISPLAY_RESIZE || first){
+			font =  al_create_builtin_font();
+			must_init(font, "builtin font");
+
+			screen_width = al_get_display_width(disp);
+			screen_height = al_get_display_height(disp);
+			i=0;
+			while(i<am_tracks){
+				float y_centre = screen_height/(am_tracks+1)*(i+1);
+				
+				track_box[i].font =get_font(config.font_name, screen_width, screen_height);
+				if(!track_box[i].font)
+					printf("Couldn't get font %s\n",config.font_name);
+				
+				track_box[i].x1=screen_width/4;
+				track_box[i].y1=y_centre-screen_height/(am_tracks+1)/2;
+				track_box[i].x2=screen_width/4*3;
+				track_box[i].y2=y_centre+screen_height/(am_tracks+1)/2;
+				i++;
+			}
+		}
+		
 		if(EndProgram){
 			break;
 		}
-		al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
-		
-		al_clear_to_color(al_map_rgb(0,0,0));
-		i=0;
-		while(i<am_tracks){
-			_Bool mouse_in_box = handle_click_box(track_box[i], mouse_state.x,mouse_state.y);
-			if(mouse_in_box && click){
-				race(track_files[i], &config, disp, audio_stream);
-				al_flush_event_queue(queue);
-				break;
-			}
-			i++;
-		}
+		if(first|al_is_event_queue_empty(queue)){
+			ALLEGRO_MOUSE_STATE mouse_state;
+			al_get_mouse_state(&mouse_state);
+			al_clear_to_color(al_map_rgb(0,0,0));
 
-		al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v0.1.0");
-		al_flip_display();
+			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
+			
+			i=0;
+			while(i<am_tracks){
+				_Bool mouse_in_box = handle_click_box(track_box[i], mouse_state.x,mouse_state.y);
+				if(mouse_in_box && click){
+					race(track_files[i], &config, disp);
+					back_from_race=true;
+					al_flush_event_queue(queue);
+					break;
+				}
+				i++;
+			}
+
+			al_flip_display();
+		}
+		first=back_from_race;
+		back_from_race=false;
 		al_wait_for_event(queue,&event);
-		first=false;
 	}
 }
 
