@@ -7,7 +7,7 @@ Go to the directory of the source cod and run:
 ```shell
 make
 ```
-This should build the program and create the file `zobrollo`. At the moment Zobrollo is only supported for UNIX this I intend to change in the future.
+This should build the program and create the file `zobrollo`.
 # How to run
 On UNIX-like operating systems use;
 ```shell
@@ -32,7 +32,6 @@ If you are in any trouble don't hesitate to send me an e-mail:<a href="mailto:th
 
 # To-do list
 <ol>
-	<li>Windows support.</li>
 	<li>Be able to view records from a graphical interface.</li>
 	<li>Be able to store, replay and race against ghosts from a graphical interface.</li>
 	<li>Add more tracks.</li>
