@@ -9,7 +9,7 @@ sudo make install
 ```
 This should build the program and create the file `zobrollo`.
 
-#Setting up font
+# Setting up font
 You will probably need to change the location of the font, before you can run the game. This you do by changing line 1 of `/usr/share/zobrollo/config.cfg`. By default this is the location of the font.
 ```shell
 /usr/share/fonts/TTF/DejaVuSansCondensed-Bold.ttf
