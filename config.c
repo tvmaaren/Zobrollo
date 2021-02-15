@@ -22,6 +22,7 @@ e-mail:thomas.v.maaren@outlook.com
 #include <stdlib.h>
 #include <stdio.h>
 #include <allegro5/allegro5.h>
+#include "file_paths.h"
 #include "config.h"
 
 //reads the config.cfg file
@@ -32,7 +33,11 @@ void get_config(CONFIG* config){
 
 	//get info from config file
 	//TODO: Have better error detection
-	const ALLEGRO_CONFIG* cfg= al_load_config_file("config.cfg");
+	const ALLEGRO_CONFIG* cfg= al_load_config_file(data_dir sep_str "config.cfg");
+	if(!cfg){
+		fprintf(stderr, "Error: Could not find \"config.cfg\"\n");
+		exit(1);
+	}
 
 	config->font_name= 	al_get_config_value(cfg, "", "font");
 	

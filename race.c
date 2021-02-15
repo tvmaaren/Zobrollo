@@ -34,6 +34,7 @@ e-mail:thomas.v.maaren@outlook.com
 #include "config.h"
 #include "race.h"
 #include "misc.h"
+#include "file_paths.h"
 
 //the different modes of play
 #define COUNTDOWN 0
@@ -94,8 +95,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
     	al_register_event_source(queue, al_get_display_event_source(disp));
     	al_register_event_source(queue, al_get_timer_event_source(timer));
 
-	ALLEGRO_BITMAP* full_heart = al_load_bitmap("full heart.png");
-	ALLEGRO_BITMAP* half_heart = al_load_bitmap("half heart.png");
+	ALLEGRO_BITMAP* full_heart = al_load_bitmap(data_dir sep_str "full heart.png");
+	ALLEGRO_BITMAP* half_heart = al_load_bitmap(data_dir sep_str "half heart.png");
 
 	#define KEY_SEEN     1
 	#define KEY_RELEASED 2
@@ -150,8 +151,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 				screen_width  = al_get_display_width(disp);
 				font = al_create_builtin_font();
 
-				full_heart = al_load_bitmap("full heart.png");
-				half_heart = al_load_bitmap("half heart.png");
+				full_heart = al_load_bitmap(data_dir sep_str"full heart.png");
+				half_heart = al_load_bitmap(data_dir sep_str"half heart.png");
 
 				redraw=true;
 				break;
@@ -237,8 +238,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 					screen_width  = al_get_display_width(disp);
 					font = al_create_builtin_font();
 
-					ALLEGRO_BITMAP* full_heart = al_load_bitmap("full heart.png");
-					ALLEGRO_BITMAP* half_heart = al_load_bitmap("half heart.png");
+					ALLEGRO_BITMAP* full_heart = al_load_bitmap(data_dir sep_str"full heart.png");
+					ALLEGRO_BITMAP* half_heart = al_load_bitmap(data_dir sep_str"half heart.png");
 
 					key[ALLEGRO_KEY_F11] = 0;
 				}

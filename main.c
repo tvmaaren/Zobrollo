@@ -32,16 +32,12 @@ e-mail:thomas.v.maaren@outlook.com
 #include "config.h"
 #include "race.h"
 #include "misc.h"
+#include "file_paths.h"
 
-#define version "0.1.1"
+#define version "0.1.2"
 
 #define thickness 2
 
-#ifdef _WIN32
-	#define sep_char '\\'
-#else
-	#define sep_char '/'
-#endif
 
 typedef struct{
 	float x1,y1,x2,y2;
@@ -72,7 +68,7 @@ void main(){
 	must_init(al_init_image_addon(), "image");
 
 	//get a list of track names
-	ALLEGRO_FS_ENTRY *track_dir = al_create_fs_entry("tracks");
+	ALLEGRO_FS_ENTRY *track_dir = al_create_fs_entry(data_dir"/tracks");
 	if(!al_open_directory(track_dir)){
 		fprintf(stderr, "Could not open track directory\n");
 		return;
