@@ -41,4 +41,4 @@ install: main
 	install -Dm644 half\ heart.png ${DESTDIR}${DATADIR}/half\ heart.png
 	install -Dm644 tracks/example  ${DESTDIR}${DATADIR}/tracks/example
 	install -Dm644 tracks/Long\ Straight  ${DESTDIR}${DATADIR}/tracks/Long\ straight
-	install -Dm644 LICENSE ${LICENSEDIR}/zobrollo/LICENSE
+	install -Dm644 LICENSE ${DESTDIR}${LICENSEDIR}/zobrollo/LICENSE
