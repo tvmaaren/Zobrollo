@@ -9,7 +9,7 @@ default:  main
 show: showtrack
 
 main: main.c config.o race.o misc.o record.o file_paths.h
-	cc  -g main.c record.o config.o race.o drawtrack.o kart.o misc.o -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_audio -lallegro_image -o zobrollo
+	cc  -g main.c record.o config.o race.o drawtrack.o kart.o misc.o -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image -o zobrollo
 
 
 race.o: race.c race.h drawtrack.o kart.o file_paths.h
