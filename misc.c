@@ -23,12 +23,11 @@ e-mail:thomas.v.maaren@outlook.com
 #include <stdio.h>
 #include <stdlib.h>
 
-void must_init(_Bool test, const char *description)
-{
-    if(test) return;
-
-    fprintf(stderr,"couldn't initialize %s\n", description);
-    exit(1);
+void must_init(_Bool test, const char *description){
+	if(test) return;
+	
+	fprintf(stderr,"couldn't initialize %s\n", description);
+	exit(1);
 }
 
 //Adds ten elements to the list if this is necessary.
@@ -40,4 +39,4 @@ void add_element(void** list, int *required, int *available, size_t element_size
 	}
 	return;
 }
-
+// vim: cc=100

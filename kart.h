@@ -10,3 +10,5 @@ typedef struct{
 
 void drawkart(float x,float y, float angle, float scale, int width, int height, 
 		kart_t kart);
+
+// vim: cc=100

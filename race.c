@@ -26,15 +26,18 @@ e-mail:thomas.v.maaren@outlook.com
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_image.h>
-#include <math.h>
 
+#include <math.h>
 #include <stdio.h>
+#include <time.h>
+
 #include "drawtrack.h"
 #include "kart.h"
 #include "config.h"
 #include "race.h"
 #include "misc.h"
 #include "file_paths.h"
+#include "record.h"
 
 //the different modes of play
 #define COUNTDOWN 0
@@ -42,7 +45,6 @@ e-mail:thomas.v.maaren@outlook.com
 #define END 2
 
 
-int compare(const void* a, const void* b);//Function used by sort function
 char * SecToString(double  secs);//Easily display time
 int inc_circ_count(int i, int max);//Make it loop round forwards
 int dec_circ_count(int i, int max);//Make it loop round backwards
@@ -51,7 +53,9 @@ int PointAndLine(float x, float y, float x1, float y1, float x2, float y2);
 float InInterval(float a);//Have angle between -pi and pi
 void SaveRace(float *buf, int am_frames, FILE *save_file, float fps);//Saves the race in a file
 
-void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* disp){
+void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config, 
+		ALLEGRO_DISPLAY* disp){
+
 	TRACK_DATA track;
 	
 	ALLEGRO_FILE* track_file = al_open_fs_entry(track_file_entry, "r");
@@ -70,6 +74,29 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 	track.milestone_interval = 20;
 	track.milestone_size = 4;
 	track.border_width = 4;
+
+	char* home_path = getenv(home_var);
+	char record_path[strlen(home_path) + strlen(local_dir sep_str"records"sep_str)+
+		strlen(filename)];
+	strcpy(record_path, home_path);
+	strcat(record_path, local_dir sep_str "records"sep_str);
+	if(!al_make_directory(record_path)){
+		fprintf(stderr, "Error: Could not create \"%s\"\n",record_path);
+		exit(1);
+	}
+	strcat(record_path, filename);
+	
+	ALLEGRO_FILE* record_file =al_fopen(record_path,"r+");
+	if(!record_file){
+	    //file does not exist yet
+	    record_file = al_fopen(record_path,"w+");
+	    if(!record_file){
+		    fprintf(stderr, "Error: Could not create \"%s\"\n", record_path);
+	    }
+	}
+
+	record *records;
+	int am_records = load_record(record_file, &records, false);
 	
 	//timers
 	ALLEGRO_TIMER* timer = al_create_timer(1.0 / config->fps);
@@ -106,7 +133,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 
 	float v=0;
 	float angle=M_PI/2;
-	float min_radius = sqrt(config->kart_height*config->kart_height/4+pow(config->kart_height/tan(config->max_wheel_angle)+config->kart_width/2,2));
+	float min_radius = sqrt(config->kart_height*config->kart_height/4+
+		pow(config->kart_height/tan(config->max_wheel_angle)+config->kart_width/2,2));
 	float scale=1;
 	float track_angle;
 	float damage=0;
@@ -120,7 +148,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 	int cur_segment =0;
 
 	int max_segment =cur_segment;//the highest segment it has fairly reached
-	double time=0;
+	double stopwatch=0;
 	int mode = COUNTDOWN;
 	int lap = 1;
 
@@ -178,6 +206,12 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 					if(radius<min_radius)radius=min_radius;
 					angle+=v/radius/config->fps;
 				}
+				if(key[ALLEGRO_KEY_EQUALS]){
+					scale*=pow(2,1/config->fps);
+				}
+				if(key[ALLEGRO_KEY_MINUS]){
+					scale*=pow(2,-1/config->fps);
+				}
 
 				if(key[ALLEGRO_KEY_ESCAPE]){
 					EndProgram = true;
@@ -190,14 +224,37 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 				float new_x_pos=x_pos+cos(angle)*v/config->fps;
 				float new_y_pos=y_pos+sin(angle)*v/config->fps;
 
-				int new_cur_segment=GetCurSegment(new_x_pos, new_y_pos, &track_angle, cur_segment, track);
+				int new_cur_segment=GetCurSegment(new_x_pos, new_y_pos, 
+						&track_angle, cur_segment, track);
 				if(new_cur_segment!=-1){
 					
 					if(mode==PLAYING&&max_segment==track.n_segments-1 && 
-							cur_segment==track.n_segments-1 && new_cur_segment==0){
+							cur_segment==track.n_segments-1 && 
+							new_cur_segment==0){
 						lap++;
 						if(lap>config->laps){
 							mode=END;
+
+							//store the time the race was made in the 
+							//record file
+							time_t pSec = time(NULL);
+							struct tm* local_time = localtime(&pSec);
+							char date_string[30];
+							sprintf(date_string,
+									"%d-%02d-%02d "
+									"%02d:%02d:%02d\n", 
+									local_time->tm_year+1900,
+									local_time->tm_mon+1,
+									local_time->tm_mday,
+									local_time->tm_hour,
+									local_time->tm_min,
+									local_time->tm_sec);;
+							al_fputs(record_file,date_string);
+							char record_file_text[20];
+
+							sprintf(record_file_text, "%f\n", stopwatch);
+							al_fputs(record_file, record_file_text);
+							al_fclose(record_file);
 						}
 						max_segment = 0;
 					}
@@ -220,7 +277,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 					damage+=abs(v-v_new);
 					if(mode==PLAYING && damage>=config->death_crash){
 
-						time=-1;
+						stopwatch=-1;
 						mode=END;
 					}
 					v=v_new;
@@ -233,13 +290,17 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 				key[event.keyboard.keycode] = KEY_SEEN | KEY_RELEASED;
 				if(key[ALLEGRO_KEY_F11]){
 					//Toggle full screen
-					al_set_display_flag(disp, ALLEGRO_FULLSCREEN_WINDOW, !(_Bool)(al_get_display_flags(disp) & ALLEGRO_FULLSCREEN_WINDOW));
+					al_set_display_flag(disp, ALLEGRO_FULLSCREEN_WINDOW, 
+							!(_Bool)(al_get_display_flags(disp) & 
+							ALLEGRO_FULLSCREEN_WINDOW));
 					screen_height = al_get_display_height(disp);
 					screen_width  = al_get_display_width(disp);
 					font = al_create_builtin_font();
 
-					ALLEGRO_BITMAP* full_heart = al_load_bitmap(data_dir sep_str"full heart.png");
-					ALLEGRO_BITMAP* half_heart = al_load_bitmap(data_dir sep_str"half heart.png");
+					ALLEGRO_BITMAP* full_heart = 
+						al_load_bitmap(data_dir sep_str"full heart.png");
+					ALLEGRO_BITMAP* half_heart = 
+						al_load_bitmap(data_dir sep_str"half heart.png");
 
 					key[ALLEGRO_KEY_F11] = 0;
 				}
@@ -249,6 +310,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 				key[event.keyboard.keycode] &= KEY_RELEASED;
 				break;
 			case(ALLEGRO_EVENT_DISPLAY_CLOSE):
+				printf("display close\n");
 				exit(1);
 				break;
 		}
@@ -256,31 +318,42 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 		
 		if(redraw && al_is_event_queue_empty(queue)){
 			if(mode==PLAYING){
-				time=al_get_time()-start_time;
+				stopwatch=al_get_time()-start_time;
 			}
 			al_clear_to_color(al_map_rgb(0,0,0));
-			drawtrack(x_pos,y_pos, -track_angle-M_PI/2,scale,screen_width, screen_height,track);
+			drawtrack(x_pos,y_pos, -track_angle-M_PI/2,scale,screen_width, 
+					screen_height,track);
 			
 			
 			//Draw hearts
-			float heart_width = 10;
-			float heart_height = 10;
-			float heart_gap = 2;
-			int am_hearts = (int)ceil((config->death_crash-damage)/config->life_per_heart);
+			if(config->show_hearts){
+				float heart_width = 10;
+				float heart_height = 10;
+				float heart_gap = 2;
+				int am_hearts = 
+					(int)ceil(
+						(config->death_crash-damage)
+						/config->life_per_heart
+					);
 
-			int heart_i=0;
-			while(heart_i<am_hearts){
-				al_draw_scaled_bitmap(full_heart, 0, 0, al_get_bitmap_width(full_heart), 
-					al_get_bitmap_height(full_heart),
-					screen_width-heart_width*(heart_i+1)-heart_gap*heart_i,
-					0,heart_width,heart_height,0);
-				heart_i++;
+				int heart_i=0;
+				while(heart_i<am_hearts){
+					al_draw_scaled_bitmap(full_heart, 0, 0, 
+						al_get_bitmap_width(full_heart), 
+						al_get_bitmap_height(full_heart),
+						screen_width-heart_width*(heart_i+1)-heart_gap*heart_i,
+						0,heart_width,heart_height,0);
+					heart_i++;
+				}
 			}
 			
 			//draw player karts
-			ALLEGRO_COLOR kart_color=al_map_rgb(config->kart_color_r,config->kart_color_g,config->kart_color_b);
-			kart_t main_kart = {angle, x_pos, y_pos, config->kart_width, config->kart_height, kart_color};
-			drawkart(x_pos, y_pos,-track_angle-M_PI/2, scale, screen_width, screen_height,  main_kart);
+			ALLEGRO_COLOR kart_color=al_map_rgb(config->kart_color_r,
+					config->kart_color_g,config->kart_color_b);
+			kart_t main_kart = {angle, x_pos, y_pos, config->kart_width, 
+				config->kart_height, kart_color};
+			drawkart(x_pos, y_pos,-track_angle-M_PI/2, scale, screen_width, 
+					screen_height,  main_kart);
 
 			//display the map
 			if(config->show_map){
@@ -293,12 +366,14 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 				float midy=(track.max_y+track.min_y)/2;
 				float map_scale;
 				map_scale=map_max_width/(track.max_x-track.min_x);
-				if(map_max_height/(track.max_y - track.min_y)<map_scale)map_scale=map_max_height/(track.max_y-track.min_y);
+				if(map_max_height/(track.max_y - track.min_y)<map_scale)map_scale=
+					map_max_height/(track.max_y-track.min_y);
 
 				float map_c_x=midx-(map_x-screen_width/2)/map_scale;
 				float map_c_y=midy-(map_y-screen_height/2)/map_scale;
 
-				drawtrack(map_c_x, map_c_y, 0, map_scale, screen_width, screen_height, track);
+				drawtrack(map_c_x, map_c_y, 0, map_scale, screen_width, 
+						screen_height, track);
 				//draw the dot that represents the player
 				
 				ALLEGRO_TRANSFORM transform;
@@ -322,7 +397,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 			if(mode==COUNTDOWN){
 				char text[10];
 				sprintf(text, "%d", count_val);
-				al_draw_text(splash, al_map_rgb(255, 255, 255), screen_width/2-al_get_text_width(splash,text)/2, 
+				al_draw_text(splash, al_map_rgb(255, 255, 255), screen_width/2-
+						al_get_text_width(splash,text)/2, 
 					screen_height/2-al_get_font_ascent(splash)/2,0, text);
 			}
 				
@@ -374,25 +450,33 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 			}
 			if(config->show_stopwatch){
 				char timetext[20];
-				sprintf(timetext, "time=%s, ", SecToString(time));
+				sprintf(timetext, "time=%s, ", SecToString(stopwatch));
 				strcat(infotext, timetext);
 			}
 			if(config->show_lap){
 				char lap_text[20];
-				sprintf(lap_text, "lap=%d", lap);
+				sprintf(lap_text, "lap=%d, ", lap);
 				strcat(infotext, lap_text);
+			}
+			if(config->show_record &&am_records>0){
+				char recordtext[20];
+				sprintf(recordtext, "record=%s, ", 
+						SecToString(records[0].time));
+				strcat(infotext, recordtext);
 			}
 
 			al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, infotext);
 
 			if(mode==END){
 				char* complete_text;
-				if(time==-1)complete_text="YOU CRASHED!";
+				if(stopwatch==-1)complete_text="YOU CRASHED!";
 				else
-					complete_text=SecToString(time);
+					complete_text=SecToString(stopwatch);
 
-				al_draw_text(splash, al_map_rgb(255, 255, 255), screen_width/2-al_get_text_width(splash,complete_text)/2, 
-						screen_height/2-al_get_font_ascent(splash)/2,0, complete_text);
+				al_draw_text(splash, al_map_rgb(255, 255, 255), screen_width/2-
+						al_get_text_width(splash,complete_text)/2, 
+						screen_height/2-al_get_font_ascent(splash)/2,0, 
+						complete_text);
 			}
 			al_flip_display();
 
@@ -405,17 +489,10 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, CONFIG* config, ALLEGRO_DISPLAY* d
 	
 	al_destroy_timer(countdown);
 	al_destroy_timer(timer);
+
+	free(records);
 	
 }
-
-//Function used by sort function
-int compare(const void* a, const void* b){
-	float x = *(float*)a;
-	float y = *(float*)b;
-	return x<=y ? (x<y?-1 : 0) : 1;
-}
-
-
 
 
 char * SecToString(double  secs){
@@ -531,7 +608,8 @@ int GetCurSegment(float x, float y, float* track_angle, int cur_segment, TRACK_D
 	}else{//line
 		LINE_SEGMENT* segment = (LINE_SEGMENT*)track_data.segments[cur_segment];
 		//check if it is a horizontal rectangle
-		if(abs(segment->outer.y1-segment->outer.y2)<1 || abs(segment->outer.x1 - segment->inner.x1)<1){
+		if(abs(segment->outer.y1-segment->outer.y2)<1 || 
+				abs(segment->outer.x1 - segment->inner.x1)<1){
 			if(segment->outer.x1>segment->outer.x2)*track_angle=M_PI;
 			else *track_angle=0;
 			if(segment->outer.x1>segment->outer.x2)*track_angle=M_PI;
@@ -550,7 +628,8 @@ int GetCurSegment(float x, float y, float* track_angle, int cur_segment, TRACK_D
 			}
 		}
 		//check if it is a vertical rectangle
-		else if(abs(segment->outer.y1-segment->inner.y1)<1 || abs(segment->outer.x1 - segment->outer.x2)<1){
+		else if(abs(segment->outer.y1-segment->inner.y1)<1 || 
+				abs(segment->outer.x1 - segment->outer.x2)<1){
 			if(segment->outer.y2>segment->outer.y1)*track_angle=M_PI/2;
 			else *track_angle=-M_PI/2;
 			if(segment->inner.y1<y ^ segment->inner.y2>segment->inner.y1){
@@ -576,28 +655,37 @@ int GetCurSegment(float x, float y, float* track_angle, int cur_segment, TRACK_D
 			if(d_x<0)*track_angle+=M_PI;
 			//check if it is outside of the track, but after its endings.
 			if(PointAndLine(segment->inner.x1,segment->inner.y1,segment->inner.x2,
-							segment->inner.y2, segment->outer.x2, segment->outer.y2)==2){
+							segment->inner.y2, segment->outer.x2, 
+							segment->outer.y2)==2){
 				//y2<y1
-				if(PointAndLine(x,y,segment->inner.x1,segment->inner.y1,segment->outer.x1
+				if(PointAndLine(x,y,segment->inner.x1,segment->inner.y1,
+							segment->outer.x1
 							,segment->outer.y1)==2){
-					cur_segment = dec_circ_count(cur_segment, track_data.n_segments-1);
+					cur_segment = dec_circ_count(cur_segment, 
+							track_data.n_segments-1);
 					change=1;
 				}
-				else if(PointAndLine(x,y,segment->inner.x2,segment->inner.y2,segment->outer.x2
+				else if(PointAndLine(x,y,segment->inner.x2,
+							segment->inner.y2,segment->outer.x2
 							,segment->outer.y2)==0){
-					cur_segment = inc_circ_count(cur_segment, track_data.n_segments-1);
+					cur_segment = inc_circ_count(cur_segment, 
+							track_data.n_segments-1);
 					change=1;
 				}
 			}else{
 				//y2>y1
-				if(PointAndLine(x,y,segment->inner.x1,segment->inner.y1,segment->outer.x1
+				if(PointAndLine(x,y,segment->inner.x1,segment->inner.y1,
+							segment->outer.x1
 							,segment->outer.y1)==0){
-					cur_segment = dec_circ_count(cur_segment, track_data.n_segments-1);
+					cur_segment = dec_circ_count(cur_segment, 
+							track_data.n_segments-1);
 					change=1;
 				}
-				else if(PointAndLine(x,y,segment->outer.x2,segment->outer.y2,segment->inner.x2
+				else if(PointAndLine(x,y,segment->outer.x2,segment->outer.y2,
+							segment->inner.x2
 							,segment->inner.y2)==2){
-					cur_segment = inc_circ_count(cur_segment, track_data.n_segments-1);
+					cur_segment = inc_circ_count(cur_segment, 
+							track_data.n_segments-1);
 					change=1;
 				}
 			}
@@ -652,3 +740,4 @@ void SaveRace(float *buf, int am_frames, FILE *save_file, float fps){
 	fwrite(&fps, sizeof(float), 1, save_file);
 	fwrite(buf, sizeof(float), am_frames*3, save_file);
 }
+// vim: cc=100

@@ -54,3 +54,5 @@ int GetSimpleSegments(void*** segments, _Bool** segment_types, float* trackwidth
 void drawtrack(float x, float y, float angle, float scale, int width, int height, TRACK_DATA track_data);
 void loadtrack(ALLEGRO_FILE* file, TRACK_DATA* track_data);
 void cart2pol(float x, float y, float *angle, float *dist);
+
+// vim: cc=100

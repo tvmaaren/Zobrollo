@@ -28,17 +28,10 @@ e-mail:thomas.v.maaren@outlook.com
 //reads the config.cfg file
 
 
-void get_config(CONFIG* config){
-	
+void get_config(CONFIG* config, const ALLEGRO_CONFIG* cfg){
 
 	//get info from config file
 	//TODO: Have better error detection
-	const ALLEGRO_CONFIG* cfg= al_load_config_file(data_dir sep_str "config.cfg");
-	if(!cfg){
-		fprintf(stderr, "Error: Could not find \"config.cfg\"\n");
-		exit(1);
-	}
-
 	config->font_name= 	al_get_config_value(cfg, "", "font");
 	
 	config->laps= 		atoi(al_get_config_value(cfg,"", "laps"));
@@ -81,9 +74,10 @@ void get_config(CONFIG* config){
 	config->show_y_pos=get_config_bool(cfg, "information", "y_pos");
 	config->show_segment=get_config_bool(cfg, "information", "segment");
 	config->show_stopwatch=get_config_bool(cfg, "information", "stopwatch");
-	//config->show_record=get_config_bool(cfg, "information", "record");
+	config->show_record=get_config_bool(cfg, "information", "record");
 	config->show_map=get_config_bool(cfg, "information", "map");
 	config->show_lap=get_config_bool(cfg, "information", "lap");
+	config->show_hearts=get_config_bool(cfg, "information", "hearts");
 
 	config->life_per_heart= atof(al_get_config_value(cfg, "information", "life_per_heart"));
 
@@ -91,6 +85,28 @@ void get_config(CONFIG* config){
 	config->ghost_color_r=atoi(al_get_config_value(cfg,"ghost", "color_r"));
 	config->ghost_color_g=atoi(al_get_config_value(cfg,"ghost", "color_g"));
 	config->ghost_color_b=atoi(al_get_config_value(cfg,"ghost", "color_b"));
+	
+	//button
+
+	config->button_border_thickness=atoi(al_get_config_value(cfg,"button","border_thickness"));
+
+	config->button_border_color_r=atoi(al_get_config_value(cfg,"button","border_color_r")) ;
+	config->button_border_color_g=atoi(al_get_config_value(cfg,"button","border_color_g")) ;
+	config->button_border_color_b=atoi(al_get_config_value(cfg,"button","border_color_b")) ;
+	config->button_border_color=al_map_rgb(config->button_border_color_r,
+			config->button_border_color_g,config->button_border_color_b);
+
+	config->button_select_color_r=atoi(al_get_config_value(cfg, "button","select_color_r")) ;
+	config->button_select_color_g=atoi(al_get_config_value(cfg, "button","select_color_g")) ;
+	config->button_select_color_b=atoi(al_get_config_value(cfg, "button","select_color_b")) ;
+	config->button_select_color=al_map_rgb(config->button_select_color_r,
+			config->button_select_color_g,config->button_select_color_b);
+
+	config->button_text_color_r=atoi(al_get_config_value(cfg, "button","text_color_r")) ;
+	config->button_text_color_g=atoi(al_get_config_value(cfg, "button","text_color_g")) ;
+	config->button_text_color_b=atoi(al_get_config_value(cfg, "button","text_color_b")) ;
+	config->button_text_color=al_map_rgb(config->button_text_color_r,
+			config->button_text_color_g,config->button_text_color_b);
 }
 
 _Bool get_config_bool(const ALLEGRO_CONFIG *config, const char *section, const char *key){
@@ -101,3 +117,4 @@ _Bool get_config_bool(const ALLEGRO_CONFIG *config, const char *section, const c
 			key, section);
 	exit(1);
 }
+// vim: cc=100

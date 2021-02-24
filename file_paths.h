@@ -18,16 +18,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 e-mail:thomas.v.maaren@outlook.com
 */
 
+#ifdef __linux__
+	#define home_var "HOME"
 
-#ifdef _WIN32
-        #define sep_char '\\'
-	#define sep_str "\\"
-
-	#define data_dir "%%homedrive%%\\Program Files (x86)\\zobrollo"
-#else
         #define sep_char '/'
         #define sep_str "/"
 	
 	#define data_dir "/usr/share/zobrollo"
+	#define local_dir "/.config/zobrollo"
+#elif	 _WIN32
+	#define home_var "userprofile"
+
+        #define sep_char '\\'
+	#define sep_str "\\"
+
+	#define data_dir "."
+	#define local_dir "\\.zobrollo"
+#else
+	#define home_var "HOME"
+
+	#define sep_char '/'
+	#define sep_str "/"
+	
+	#define data_dir "."
+	#define local_dir "/.zobrollo"
 #endif
 
+// vim: cc=100

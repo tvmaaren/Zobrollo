@@ -8,12 +8,12 @@ default:  main
 
 show: showtrack
 
-main: main.c config.o race.o misc.o file_paths.h
-	cc  -g main.c config.o race.o drawtrack.o kart.o misc.o -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_audio -lallegro_image -o zobrollo
+main: main.c config.o race.o misc.o record.o file_paths.h
+	cc  -g main.c record.o config.o race.o drawtrack.o kart.o misc.o -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_audio -lallegro_image -o zobrollo
 
 
 race.o: race.c race.h drawtrack.o kart.o file_paths.h
-	cc -c -g race.c -o race.o -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_audio -lallegro_image
+	cc -c -g race.c -o race.o
 
 
 drawtrack.o: drawtrack.c drawtrack.h misc.o
@@ -26,8 +26,12 @@ kart.o: kart.c kart.h
 config.o: config.c config.h file_paths.h
 	cc -c -g config.c -o config.o
 
+record.o: record.h record.c misc.o
+	cc -c -g record.c -o record.o
+
 misc.o: misc.c misc.h
 	cc -c -g misc.c -o misc.o
+
 
 file_paths.h:
 

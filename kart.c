@@ -61,3 +61,4 @@ void drawkart(float x,float y, float angle, float scale, int width, int height,
 	al_use_transform(&transform);
 	return;
 }
+// vim: cc=100

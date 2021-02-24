@@ -397,3 +397,4 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 	al_identity_transform(&transform);
 	al_use_transform(&transform);
 }
+// vim: cc=100
