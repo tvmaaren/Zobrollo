@@ -30,44 +30,49 @@ e-mail:thomas.v.maaren@outlook.com
 #include <allegro5/allegro_ttf.h>
 
 #include "config.h"
-#include "race.h"
 #include "misc.h"
 #include "file_paths.h"
+#include "race.h"
 #include "record.h"
+#include "ghost.h"
+#include "gui.h"
 
-#define version "0.2.0"
+#define version "0.2.1"
 
 #define thickness 2
 
-
 typedef struct{
-	//Position of corners as a fraction of the screen.
-	float x1frac,y1frac,x2frac,y2frac;
-
-	float border_thickness;
-	ALLEGRO_COLOR border_color;
-	ALLEGRO_COLOR select_color;
-	ALLEGRO_COLOR text_color;
-	char* text;
-	const char* font_name;
-}click_box;
-
-
-
-void draw_text(const char* name, char* text, ALLEGRO_COLOR color, float x, 
-		float y, int max_width, int max_height, _Bool resized);
-
-_Bool handle_click_box(click_box box,float mouse_x, float mouse_y, 
-		int screen_width, int screen_height, _Bool resized);
+	float x1frac;
+	float y1frac;
+	float x2frac;
+	float y2frac;
+}box_relative;
 
 void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event, 
-		ALLEGRO_EVENT_QUEUE *queue, char* dir_path,
+		ALLEGRO_EVENT_QUEUE *queue, char* dir_path, PATHS* paths,
 		void (*click_func)(ALLEGRO_FS_ENTRY *track_file_entry,char* filename,
-			CONFIG* config, ALLEGRO_DISPLAY* disp));
+			CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths));
 
 void main(){
-	//get users directory
-	char *home_path = getenv(home_var);
+	//get directories
+	PATHS paths;
+	
+	paths.home= getenv(home_var);
+	
+	int home_path_len = strlen(paths.home);
+	
+	char record_path[home_path_len + sizeof(local_dir sep_str "records")];
+	strcpy(record_path, paths.home);
+	strcat(record_path, local_dir sep_str "records");
+	paths.record = record_path;
+	
+	char ghost_path[home_path_len + sizeof(local_dir sep_str "ghosts")];
+	strcpy(ghost_path, paths.home);
+	strcat(ghost_path, local_dir sep_str "ghosts");
+	paths.ghost = ghost_path;
+
+	paths.working = al_get_current_directory();
+	
 	
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/
@@ -76,8 +81,8 @@ void main(){
 	must_init(al_init(),"allegro");
 	
 	//Load configuration	
-	char config_path[strlen(home_path)+sizeof(local_dir sep_str "config.cfg")];
-	strcpy(config_path, home_path);
+	char config_path[home_path_len+sizeof(local_dir sep_str "config.cfg")];
+	strcpy(config_path, paths.home);
 
 	const ALLEGRO_CONFIG* cfg = al_load_config_file(
 			strcat(config_path,local_dir sep_str "config.cfg"));
@@ -126,12 +131,6 @@ void main(){
     	al_register_event_source(queue, al_get_mouse_event_source());
 
 	
-	click_box start_box = {0.1,0.1,0.5,0.9,config.button_border_thickness, config.button_border_color,
-		config.button_select_color, config.button_text_color, "Race!", config.font_name};
-	click_box record_box = {0.5,0.1,0.9,0.5,config.button_border_thickness, config.button_border_color,
-		config.button_select_color, config.button_text_color, "Records", config.font_name};
-	click_box quit_box = {0.5,0.5,0.9,0.9,config.button_border_thickness, config.button_border_color,
-		config.button_select_color, config.button_text_color, "Quit", config.font_name};
 
 	#define KEY_SEEN     1
 	#define KEY_RELEASED 2
@@ -145,6 +144,9 @@ void main(){
 	int screen_height;
 
 	_Bool back_from_race = false;
+
+	/*ALLEGRO_FS_ENTRY* ghost_entry = al_create_fs_entry("2021-02-27 16:09:31.bin" );
+	play_ghost(ghost_entry, al_create_fs_entry("./tracks/example"), "2021-02-27 16:09:31.bin" , &config, disp);*/
 
 	while(true){
 		al_acknowledge_resize(disp);
@@ -189,24 +191,28 @@ void main(){
 				click =true;
 
 			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
-			if(handle_click_box(start_box, mouse_state.x, mouse_state.y, 
-						screen_width, screen_height, resized)&&click){
+			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.1,0.1,0.5,0.9,
+						screen_width,screen_height,&config,"Race!")&&click){
 				dir_menu(&config, disp, &event, queue, data_dir sep_str "tracks",
-						race);
+						&paths,race);
 			}
-			if(handle_click_box(record_box, mouse_state.x, mouse_state.y, 
-						screen_width, screen_height, resized)&&click){
+	/*click_box start_box = {0.1,0.1,0.5,0.9,config.button_border_thickness, config.button_border_color,
+		config.button_select_color, config.button_text_color, "Race!", config.font_name};
+	click_box record_box = {0.5,0.1,0.9,0.5,config.button_border_thickness, config.button_border_color,
+		config.button_select_color, config.button_text_color, "Records", config.font_name};
+	click_box quit_box = {0.5,0.5,0.9,0.9,config.button_border_thickness, config.button_border_color,
+		config.button_select_color, config.button_text_color, "Quit", config.font_name};*/
+			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.5,0.1,0.9,0.5,
+						screen_width, screen_height, &config, "Records")&&
+					click){
 				
-				char record_path[strlen(home_path) + 
-					strlen(local_dir sep_str"records")];
-				strcpy(record_path, home_path);
-				dir_menu(&config, disp, &event, queue, 
-						strcat(record_path, local_dir sep_str "records"),
+				dir_menu(&config, disp, &event, queue, paths.record,&paths, 
 						show_record);
 
 			}
-			if(handle_click_box(quit_box, mouse_state.x, mouse_state.y, 
-						screen_width, screen_height, resized)&&click){
+			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.5,0.5,0.9,0.9,
+						screen_width, screen_height, &config, "Quit")&&
+					click){
 				exit(1);
 			}
 			al_flip_display();
@@ -221,9 +227,9 @@ void main(){
 
 //Every filein the specified directory is an item in this menu
 void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event, 
-		ALLEGRO_EVENT_QUEUE *queue, char* dir_path,
-		void (*click_func)(ALLEGRO_FS_ENTRY *track_file_entry,char* filename, 
-			CONFIG* config, ALLEGRO_DISPLAY* disp)){
+		ALLEGRO_EVENT_QUEUE *queue, char* dir_path, PATHS* paths,
+		void (*click_func)(ALLEGRO_FS_ENTRY *track_file_entry,char* filename,
+			CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths)){
 
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/
@@ -258,7 +264,7 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
                                                     sep_char)+1;
 
 	}
-	click_box file_box[am_files];
+	box_relative file_box[am_files];
 	int i=0;
 	while(i<am_files){
 		float y_centre = 1/(float)(am_files+1)*(i+1);
@@ -266,12 +272,6 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 		file_box[i].x2frac = 0.75;
 		file_box[i].y1frac = (float)y_centre-1/(float)(am_files+1)/2;
 		file_box[i].y2frac = (float)y_centre+1/(float)(am_files+1)/2;
-		file_box[i].border_thickness = config->button_border_thickness;
-		file_box[i].border_color = config->button_border_color;
-		file_box[i].select_color = config->button_select_color;
-		file_box[i].text = file_names[i];
-		file_box[i].text_color = config->button_text_color;
-		file_box[i].font_name = config->font_name;
 		
 		i++;
 	}
@@ -293,7 +293,7 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 		_Bool EndProgram=false;
 		switch(event->type){
 			case(ALLEGRO_EVENT_DISPLAY_CLOSE):
-				EndProgram=true;
+				exit(1);
 				break;
 			case(ALLEGRO_EVENT_KEY_DOWN):
 				switch(event->keyboard.keycode){
@@ -326,9 +326,9 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 		}
 		_Bool mouse_down;
 		if(first|al_is_event_queue_empty(queue)){
+			al_clear_to_color(al_map_rgb(0,0,0));
 			ALLEGRO_MOUSE_STATE mouse_state;
 			al_get_mouse_state(&mouse_state);
-			al_clear_to_color(al_map_rgb(0,0,0));
 			mouse_down = (_Bool)(mouse_state.buttons&0x1);
 			if(mouse_down && !prev_mouse_down){
 				click =true;
@@ -337,10 +337,14 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
 			i=0;
 			while(i<am_files){
-				_Bool mouse_in_box = handle_click_box(file_box[i], mouse_state.x,mouse_state.y, screen_width, screen_height, resized);
+				_Bool mouse_in_box = handle_click_box_relative(mouse_state.x,
+						mouse_state.y, file_box[i].x1frac,
+						file_box[i].y1frac,file_box[i].x2frac,
+						file_box[i].y2frac, screen_width, 
+						screen_height, config, file_names[i]);
 				if(mouse_in_box && click){
 
-					click_func(files[i], file_names[i], config, disp);
+					click_func(files[i], file_names[i], config, disp, paths);
 					back_from_race=true;
 					al_flush_event_queue(queue);
 					break;
@@ -356,41 +360,4 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 	}
 }
 
-//returns true if the mouse is above this box
-_Bool handle_click_box(click_box box,float mouse_x, float mouse_y, 
-		int screen_width, int screen_height, _Bool resized){
-	float x1 = box.x1frac*screen_width;
-	float x2 = box.x2frac*screen_width;
-	float y1 = box.y1frac*screen_height;
-	float y2 = box.y2frac*screen_height;
-
-	_Bool ret= false;
-	al_draw_rectangle(x1,y1,x2,y2,box.border_color, box.border_thickness);
-	if(mouse_x > x1 && mouse_y > y1 && mouse_x < x2 && mouse_y < y2){
-		ret=true;
-		al_draw_filled_rectangle(x1+box.border_thickness/2,
-                                         y1+box.border_thickness/2,
-				         x2-box.border_thickness/2,
-                                         y2-box.border_thickness/2,
-                                         al_map_rgb(0,200,0));
-	}
-	draw_text(box.font_name, box.text, box.text_color, (x2+x1)/2, (y2+y1)/2, x2-x1, 
-			y2-y1, resized);
-	return ret;
-}
-
-void draw_text(const char* name, char* text, ALLEGRO_COLOR color, float x, 
-		float y, int max_width, int max_height, _Bool resized){
-	int text_len = strlen(text);
-	float width_height;
-	if(max_width>max_height)
-		width_height = max_width/strlen(text);
-	else
-		width_height = max_width/strlen(text);
-		//only reload if the size of the window has changed
-	ALLEGRO_FONT* font = al_load_ttf_font_stretch(name, width_height, width_height, 
-			ALLEGRO_TTF_MONOCHROME);
-	al_draw_text(font, color, x, y-width_height/2, ALLEGRO_ALIGN_CENTRE, text);
-	al_destroy_font(font);
-}
 // vim: cc=100

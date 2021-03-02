@@ -3,40 +3,18 @@ DATADIR ?= ${PREFIX}/share/zobrollo
 LICENSEDIR ?= /usr/share/licenses
 BINDIR ?= ${PREFIX}/bin
 
+SRC = $(wildcard src/*.c)
+OBJ = $(SRC:.c=.o)
+libs=-lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image
 
-default:  main
+default: $(OBJ)
+	x86_64-w64-mingw32-gcc  $(OBJ) $(libs) -o zobrollo
 
-show: showtrack
-
-main: main.c config.o race.o misc.o record.o file_paths.h
-	cc  -g main.c record.o config.o race.o drawtrack.o kart.o misc.o -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image -o zobrollo
-
-
-race.o: race.c race.h drawtrack.o kart.o file_paths.h
-	cc -c -g race.c -o race.o
-
-
-drawtrack.o: drawtrack.c drawtrack.h misc.o
-	cc -c -g drawtrack.c -o drawtrack.o
-
-kart.o: kart.c kart.h
-	cc -c -g kart.c -o kart.o
-
-
-config.o: config.c config.h file_paths.h
-	cc -c -g config.c -o config.o
-
-record.o: record.h record.c misc.o
-	cc -c -g record.c -o record.o
-
-misc.o: misc.c misc.h
-	cc -c -g misc.c -o misc.o
-
-
-file_paths.h:
+%.o : %.c
+	x86_64-w64-mingw32-gcc -o $@ -c $<
 
 clean:
-	rm *.o zobrollo
+	rm src/*.o zobrollo
 
 install: main
 	install -Dm755 zobrollo ${DESTDIR}${BINDIR}/zobrollo

@@ -50,8 +50,10 @@ typedef struct{
 }TRACK_DATA;
 
 void add_element(void** list, int *required, int *available, size_t element_size);
-int GetSimpleSegments(void*** segments, _Bool** segment_types, float* trackwidth, ALLEGRO_FILE *file);
-void drawtrack(float x, float y, float angle, float scale, int width, int height, TRACK_DATA track_data);
+int GetSimpleSegments(void*** segments, _Bool** segment_types, float* trackwidth, 
+		ALLEGRO_FILE *file);
+void drawtrack(float x, float y, float angle, float scale, int width, int height, 
+		TRACK_DATA *track_data);
 void loadtrack(ALLEGRO_FILE* file, TRACK_DATA* track_data);
 void cart2pol(float x, float y, float *angle, float *dist);
 

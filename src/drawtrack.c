@@ -284,8 +284,15 @@ void loadtrack(ALLEGRO_FILE* file, TRACK_DATA* track_data){
 
 //make sure you have initialised allegro before running this function
 void drawtrack(float x, float y, float angle, float scale, int width, int height, 
-		TRACK_DATA track_data){
+		TRACK_DATA *track_data){
 	float dist_milestone=0;
+	
+	//TODO: track settings should be stored in the track file not defined in source
+	track_data->border_color = al_map_rgb(255,0,0);
+	track_data->milestones = true;
+	track_data->milestone_interval = 20;
+	track_data->milestone_size = 4;
+	track_data->border_width = 4;
 
 	ALLEGRO_TRANSFORM transform;
 	al_identity_transform(&transform);
@@ -297,27 +304,26 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 
 	//The width of the track border is never allowed to become
 	//less than 2 pixels after it has been transformed
-	if(track_data.border_width*scale<1)
-		track_data.border_width=1/scale;
+	if(track_data->border_width*scale<1)
+		track_data->border_width=1/scale;
 	
 	//finish line
-	al_draw_line(-track_data.trackwidth/2,0,track_data.trackwidth/2,0, track_data.border_color, 
-			track_data.border_width);
-
+	al_draw_line(-track_data->trackwidth/2,0,track_data->trackwidth/2,0, track_data->border_color, 
+			track_data->border_width);
 	int i=0;
-	while(i<track_data.n_segments){
-		if(track_data.segment_types[i]){//circle segment
-			CIRCLE_SEGMENT*segment=(CIRCLE_SEGMENT*)track_data.segments[i];
+	while(i<track_data->n_segments){
+		if(track_data->segment_types[i]){//circle segment
+			CIRCLE_SEGMENT*segment=(CIRCLE_SEGMENT*)track_data->segments[i];
 
 			al_draw_arc(segment->midx,segment->midy,segment->r_inner, 
 					segment->start_angle, segment->delta_angle,
-					track_data.border_color, track_data.border_width);
+					track_data->border_color, track_data->border_width);
 			al_draw_arc(segment->midx,segment->midy,segment->r_outer,
 					segment->start_angle, segment->delta_angle,
-					track_data.border_color, track_data.border_width);
+					track_data->border_color, track_data->border_width);
 			
 			//draw milestones
-			if(track_data.milestones){
+			if(track_data->milestones){
 				float length=abs(segment->delta_angle*segment->r_mid);
 				while(dist_milestone<length){
 					//calculate the angle from the center
@@ -327,22 +333,22 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 					//draw inner milestone
 					al_draw_line(cos(stone_angle)*segment->r_inner+segment->midx,
 						sin(stone_angle)*segment->r_inner+segment->midy,
-						cos(stone_angle)*(segment->r_inner-track_data.milestone_size)+
+						cos(stone_angle)*(segment->r_inner-track_data->milestone_size)+
 							segment->midx,
-						sin(stone_angle)*(segment->r_inner-track_data.milestone_size)+
+						sin(stone_angle)*(segment->r_inner-track_data->milestone_size)+
 							segment->midy,
-						track_data.border_color, track_data.border_width);
+						track_data->border_color, track_data->border_width);
 
 					//draw outer milestone
 					al_draw_line(cos(stone_angle)*segment->r_outer+segment->midx,
 						sin(stone_angle)*segment->r_outer+segment->midy,
 						cos(stone_angle)*(segment->r_outer+
-							track_data.milestone_size)+segment->midx,
+							track_data->milestone_size)+segment->midx,
 						sin(stone_angle)*(segment->r_outer+
-							track_data.milestone_size)+segment->midy,
-						track_data.border_color, track_data.border_width);
+							track_data->milestone_size)+segment->midy,
+						track_data->border_color, track_data->border_width);
 
-					dist_milestone+=track_data.milestone_interval;
+					dist_milestone+=track_data->milestone_interval;
 				}
 				dist_milestone-=length;
 			}
@@ -351,24 +357,24 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 
 		}else{//line segment
 			//it will draw the two trackborders begginning with the left
-			LINE_SEGMENT*segment=(LINE_SEGMENT*)track_data.segments[i];
+			LINE_SEGMENT*segment=(LINE_SEGMENT*)track_data->segments[i];
 
 			//inner
 			al_draw_line(segment->inner.x1,segment->inner.y1,segment->inner.x2,
-				segment->inner.y2,track_data.border_color, track_data.border_width);
+				segment->inner.y2,track_data->border_color, track_data->border_width);
 
 			//outer	
 			al_draw_line(segment->outer.x1,segment->outer.y1,segment->outer.x2,
-				segment->outer.y2,track_data.border_color, track_data.border_width);
+				segment->outer.y2,track_data->border_color, track_data->border_width);
 
-			if(track_data.milestones){
+			if(track_data->milestones){
 				//draw the milestones
-				float d_x=	cos(segment->angle+M_PI/2)*track_data.trackwidth/2;
-				float d_y=	sin(segment->angle+M_PI/2)*track_data.trackwidth/2;
-				float d_x_out=	cos(segment->angle+M_PI/2)*(track_data.trackwidth/2+
-						track_data.milestone_size);
-				float d_y_out=	sin(segment->angle+M_PI/2)*(track_data.trackwidth/2+
-						track_data.milestone_size);
+				float d_x=	cos(segment->angle+M_PI/2)*track_data->trackwidth/2;
+				float d_y=	sin(segment->angle+M_PI/2)*track_data->trackwidth/2;
+				float d_x_out=	cos(segment->angle+M_PI/2)*(track_data->trackwidth/2+
+						track_data->milestone_size);
+				float d_y_out=	sin(segment->angle+M_PI/2)*(track_data->trackwidth/2+
+						track_data->milestone_size);
 				
 				while(dist_milestone<segment->length){
 					float x_track=cos(segment->angle)*dist_milestone+segment->
@@ -378,14 +384,14 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 
 					//draw first milestone
 					al_draw_line(x_track+d_x, y_track+d_y,x_track+d_x_out, 
-						y_track+d_y_out,track_data.border_color, 
-						track_data.border_width);
+						y_track+d_y_out,track_data->border_color, 
+						track_data->border_width);
 
 					//draw second milestone
 					al_draw_line(x_track-d_x, y_track-d_y,x_track-d_x_out, 
-						y_track-d_y_out, track_data.border_color, 
-						track_data.border_width);
-					dist_milestone+=track_data.milestone_interval;
+						y_track-d_y_out, track_data->border_color, 
+						track_data->border_width);
+					dist_milestone+=track_data->milestone_interval;
 				}
 				dist_milestone-=segment->length;
 			}

@@ -6,8 +6,6 @@ This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 any later version.
-
-This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
@@ -34,9 +32,9 @@ e-mail:thomas.v.maaren@outlook.com
 #include "drawtrack.h"
 #include "kart.h"
 #include "config.h"
+#include "file_paths.h"
 #include "race.h"
 #include "misc.h"
-#include "file_paths.h"
 #include "record.h"
 
 //the different modes of play
@@ -54,7 +52,7 @@ float InInterval(float a);//Have angle between -pi and pi
 void SaveRace(float *buf, int am_frames, FILE *save_file, float fps);//Saves the race in a file
 
 void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config, 
-		ALLEGRO_DISPLAY* disp){
+		ALLEGRO_DISPLAY* disp, PATHS *paths){
 
 	TRACK_DATA track;
 	
@@ -68,32 +66,28 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 	loadtrack(track_file, &track);
 	al_fclose(track_file);
 
-	//TODO: track settings should be stored in the track file not defined in source
-	track.border_color = al_map_rgb(255,0,0);
-	track.milestones = true;
-	track.milestone_interval = 20;
-	track.milestone_size = 4;
-	track.border_width = 4;
+	int frame = 0;
+	int ghost_buf_len = 10;
+	float* ghost_buf = malloc(sizeof(float)*ghost_buf_len);
 
-	char* home_path = getenv(home_var);
-	char record_path[strlen(home_path) + strlen(local_dir sep_str"records"sep_str)+
-		strlen(filename)];
-	strcpy(record_path, home_path);
-	strcat(record_path, local_dir sep_str "records"sep_str);
-	if(!al_make_directory(record_path)){
-		fprintf(stderr, "Error: Could not create \"%s\"\n",record_path);
+
+
+	if(!al_make_directory(paths->record)){
+		fprintf(stderr, "Error: Could not create \"%s\"\n",paths->record);
 		exit(1);
 	}
-	strcat(record_path, filename);
+	al_change_directory(paths->record);
 	
-	ALLEGRO_FILE* record_file =al_fopen(record_path,"r+");
+	ALLEGRO_FILE* record_file =al_fopen(filename,"r+");
 	if(!record_file){
 	    //file does not exist yet
-	    record_file = al_fopen(record_path,"w+");
+	    record_file = al_fopen(paths->record,"w+");
 	    if(!record_file){
-		    fprintf(stderr, "Error: Could not create \"%s\"\n", record_path);
+		    fprintf(stderr, "Error: Could not create \"%s\"\n", paths->record);
 	    }
 	}
+
+	al_change_directory(paths->working);
 
 	record *records;
 	int am_records = load_record(record_file, &records, false);
@@ -240,6 +234,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 							time_t pSec = time(NULL);
 							struct tm* local_time = localtime(&pSec);
 							char date_string[30];
+							#define date_string_len 20
 							sprintf(date_string,
 									"%d-%02d-%02d "
 									"%02d:%02d:%02d\n", 
@@ -255,6 +250,40 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 							sprintf(record_file_text, "%f\n", stopwatch);
 							al_fputs(record_file, record_file_text);
 							al_fclose(record_file);
+
+							//Store the ghost in a bin file at
+							//local_dir/ghosts/%trackname%/%time%.bin
+
+							//remove \n
+							date_string[date_string_len-1]='\0';
+							
+							char ghost_filename[sizeof(local_dir) + 1+
+								sizeof("ghosts")+1+strlen(filename)+
+								1+date_string_len+sizeof(".bin")];
+							strcpy(ghost_filename, paths->home);
+							strcat(ghost_filename, local_dir sep_str
+									"ghosts" sep_str);
+							strcat(ghost_filename, filename);
+							strcat(ghost_filename, sep_str);
+							if(!al_make_directory(ghost_filename)){
+								fprintf(stderr, 
+									"Error: Could not create "
+									"\"%s\"\n",ghost_filename);
+								exit(1);
+							}
+							strcat(ghost_filename, date_string);
+							strcat(ghost_filename, ".bin");
+							ALLEGRO_FILE* ghost_file = 
+								al_fopen(ghost_filename, "w");
+							al_fwrite(ghost_file, &frame, sizeof(int));
+							al_fwrite(ghost_file, &(config->fps),
+									sizeof(float));
+							al_fwrite(ghost_file, ghost_buf, 
+								3*frame*sizeof(float));
+							al_fclose(ghost_file);
+							int frame_i = 0;
+							
+							
 						}
 						max_segment = 0;
 					}
@@ -310,7 +339,6 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				key[event.keyboard.keycode] &= KEY_RELEASED;
 				break;
 			case(ALLEGRO_EVENT_DISPLAY_CLOSE):
-				printf("display close\n");
 				exit(1);
 				break;
 		}
@@ -318,11 +346,18 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 		
 		if(redraw && al_is_event_queue_empty(queue)){
 			if(mode==PLAYING){
+				/*add_element((void**)&ghost_buf, &frame, &ghost_buf_len, 
+						sizeof(float)*2);*/
+				frame+=1;
+				ghost_buf = realloc(ghost_buf,3*sizeof(float)*frame);
+				ghost_buf[(frame*3-3)] = angle;
+				ghost_buf[(frame*3-2)] = x_pos;
+				ghost_buf[(frame*3-1)] = y_pos;
 				stopwatch=al_get_time()-start_time;
 			}
 			al_clear_to_color(al_map_rgb(0,0,0));
 			drawtrack(x_pos,y_pos, -track_angle-M_PI/2,scale,screen_width, 
-					screen_height,track);
+					screen_height,&track);
 			
 			
 			//Draw hearts
@@ -373,7 +408,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				float map_c_y=midy-(map_y-screen_height/2)/map_scale;
 
 				drawtrack(map_c_x, map_c_y, 0, map_scale, screen_width, 
-						screen_height, track);
+						screen_height, &track);
 				//draw the dot that represents the player
 				
 				ALLEGRO_TRANSFORM transform;
@@ -732,12 +767,5 @@ float InInterval(float a){
 	}
 	return a;
 
-}
-
-void SaveRace(float *buf, int am_frames, FILE *save_file, float fps){
-	printf("Storing %d frames in race file", am_frames);
-	fwrite(&am_frames, sizeof(int), 1, save_file);
-	fwrite(&fps, sizeof(float), 1, save_file);
-	fwrite(buf, sizeof(float), am_frames*3, save_file);
 }
 // vim: cc=100
