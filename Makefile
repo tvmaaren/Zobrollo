@@ -8,10 +8,10 @@ OBJ = $(SRC:.c=.o)
 libs=-lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image
 
 default: $(OBJ)
-	x86_64-w64-mingw32-gcc  -g $(OBJ) $(libs) -o zobrollo
+	cc $(OBJ) $(libs) -o zobrollo
 
 %.o : %.c
-	x86_64-w64-mingw32-gcc -g -o $@ -c $<
+	cc -o $@ -c $<
 
 clean:
 	rm src/*.o zobrollo

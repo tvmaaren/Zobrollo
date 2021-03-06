@@ -80,16 +80,13 @@ void show_record(ALLEGRO_FS_ENTRY *record_file_entry, char* filename, CONFIG* co
 		al_change_directory(filename);
 		strcpy(ghost_filename, records[i].date);
 		strcat(ghost_filename, ".bin");
-		printf("ghost_filename: %s\n", ghost_filename);
 		has_replay_file[i] = al_filename_exists(ghost_filename);
-		printf("%d exists\n", has_replay_file[i]);
 		i++;
 	}
 
 	int loopcount = 0;
 
 	while(true){
-		printf("Beg loop\n");
 		al_acknowledge_resize(disp);
 		al_clear_to_color(al_map_rgb(0,0,0));
 		_Bool mouse_down;
@@ -111,7 +108,7 @@ void show_record(ALLEGRO_FS_ENTRY *record_file_entry, char* filename, CONFIG* co
 								 ALLEGRO_FULLSCREEN_WINDOW));
 						break;
 					case(ALLEGRO_KEY_ESCAPE):
-						al_change_directory(paths->working);
+						al_change_directory(data_dir);
 						return;
 				}
 				break;
@@ -123,16 +120,12 @@ void show_record(ALLEGRO_FS_ENTRY *record_file_entry, char* filename, CONFIG* co
 		i =0;
 		ALLEGRO_FONT* font = al_create_builtin_font();
 		_Bool back_from_race=false;
-		printf("%d\n", am_records);
 		while(i<am_records){
-			printf("indexed loop\n");
 			al_draw_textf(font, al_map_rgb(255,255,255),0,(i)*30+10, 
 					0,"%s  %s", records[i].date,TimeToString(records[i].time));
-			printf("after drawtext\n");
 
 			if(has_replay_file[i]){
-				printf("in has_replay_file\n");
-				al_change_directory(paths->working);
+				al_change_directory(data_dir);
 				if(handle_click_box(mouse_state.x, mouse_state.y, 250, i*30, 
 						350, (i+1)*30, config, "Replay")&&click){
 
@@ -142,26 +135,18 @@ void show_record(ALLEGRO_FS_ENTRY *record_file_entry, char* filename, CONFIG* co
 					strcat(ghost_filename, ".bin");
 					ALLEGRO_FS_ENTRY * ghost_entry = 
 						al_create_fs_entry(ghost_filename);
-					al_change_directory(paths->working);
+					al_change_directory(data_dir);
 					al_change_directory("tracks");
 					ALLEGRO_FS_ENTRY * track_entry =
 						al_create_fs_entry(filename);
-					if(al_filename_exists(filename)){
-						printf("File exists\n");
-					}else{
-						printf("File does not exist\n");
-					}
-					printf("track: %p\n", track_entry);
 					al_change_directory("..");
 					play_ghost(ghost_entry, track_entry,
 							config, disp);
 					al_flush_event_queue(queue);
 					back_from_race=true;
 				}
-				printf("end has_replay_file\n");
 			}
 			i++;
-			printf("end indexed loop\n");
 		}
 		prev_mouse_down = mouse_down;
 		al_flip_display();

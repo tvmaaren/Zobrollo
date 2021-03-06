@@ -23,10 +23,8 @@ _Bool handle_click_box(float mouse_x,float mouse_y,float x1,float y1,float x2,fl
                                          y2-config->button_border_thickness/2,
                                          al_map_rgb(0,200,0));
 	}
-	printf("bef draw_text\n");
 	draw_text(config->font_name, text, config->button_text_color, (x2+x1)/2, (y2+y1)/2, 
 			x2-x1, y2-y1);
-	printf("A draw_text\n");
 	return ret;
 }
 

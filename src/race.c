@@ -70,11 +70,6 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 	int ghost_buf_len = 10;
 	float* ghost_buf = malloc(sizeof(float)*ghost_buf_len);
 
-
-
-	printf("curdir = %s\n", al_get_current_directory());
-	printf("record_dir = %s\n", al_get_current_directory());
-
 	if(!al_make_directory(paths->record)){
 		fprintf(stderr, "Error: Could not create \"%s\"\n",paths->record);
 		exit(1);
@@ -94,7 +89,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 	    }
 	}
 
-	al_change_directory(paths->working);
+	al_change_directory(data_dir);
 
 	record *records;
 	int am_records = load_record(record_file, &records, false);
@@ -281,8 +276,6 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 									"\"%s\"\n",ghost_filename);
 								exit(1);
 							}
-							printf("%s This should be on the same line\n"
-									,date_string);
 							strcat(ghost_filename, date_string);
 							strcat(ghost_filename, ".bin");
 							ALLEGRO_FILE* ghost_file = 
