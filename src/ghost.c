@@ -17,7 +17,7 @@
 void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entry, 
 		CONFIG* config, ALLEGRO_DISPLAY* disp){
 	//load the ghost file
-	ALLEGRO_FILE* ghost_file = al_open_fs_entry(ghost_file_entry, "r");
+	ALLEGRO_FILE* ghost_file = al_open_fs_entry(ghost_file_entry, "rb");
 	
 	int frames;
        	al_fread(ghost_file, &frames, sizeof(frames));
@@ -85,8 +85,11 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 				if(key[ALLEGRO_KEY_ESCAPE]){
 					quit = true;
 				}
-				for(int i = 0; i < ALLEGRO_KEY_MAX; i++)
+				int i = 0; 
+				while(i < ALLEGRO_KEY_MAX){
 			    		key[i] &= KEY_SEEN;
+					i++;
+				}
 				break;
 			case(ALLEGRO_EVENT_KEY_DOWN):
 				key[event.keyboard.keycode] = KEY_SEEN | KEY_RELEASED;

@@ -71,9 +71,8 @@ void main(){
 	strcat(ghost_path, local_dir sep_str "ghosts");
 	paths.ghost = ghost_path;
 
-	paths.working = al_get_current_directory();
-	
-	
+	al_change_directory(data_dir);
+
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/
 	_Bool prev_mouse_down = false;

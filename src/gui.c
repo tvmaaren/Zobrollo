@@ -3,6 +3,8 @@
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_primitives.h>
 
+#include <stdio.h>
+
 #include "config.h"
 #include "gui.h"
 
@@ -46,6 +48,7 @@ void draw_text(const char* name, char* text, ALLEGRO_COLOR color, float x,
 	else
 		width_height = max_width/strlen(text);
 		//only reload if the size of the window has changed
+	
 	ALLEGRO_FONT* font = al_load_ttf_font_stretch(name, width_height, width_height, 
 			ALLEGRO_TTF_MONOCHROME);
 	al_draw_text(font, color, x, y-width_height/2, ALLEGRO_ALIGN_CENTRE, text);

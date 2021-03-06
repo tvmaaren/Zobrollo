@@ -8,7 +8,7 @@ OBJ = $(SRC:.c=.o)
 libs=-lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image
 
 default: $(OBJ)
-	cc  $(OBJ) $(libs) -o zobrollo
+	cc $(OBJ) $(libs) -o zobrollo
 
 %.o : %.c
 	cc -o $@ -c $<
