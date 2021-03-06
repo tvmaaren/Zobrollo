@@ -72,6 +72,7 @@ void main(){
 	paths.ghost = ghost_path;
 
 	paths.working = al_get_current_directory();
+	printf("working directory = %s\n", paths.working);
 	
 	
 	/*true: In the previuous frame the mouse was down

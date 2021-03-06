@@ -17,13 +17,14 @@
 void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entry, 
 		CONFIG* config, ALLEGRO_DISPLAY* disp){
 	//load the ghost file
-	ALLEGRO_FILE* ghost_file = al_open_fs_entry(ghost_file_entry, "r");
+	ALLEGRO_FILE* ghost_file = al_open_fs_entry(ghost_file_entry, "rb");
 	
 	int frames;
        	al_fread(ghost_file, &frames, sizeof(frames));
 
 	float fps;
        	al_fread(ghost_file, &fps, sizeof(fps));
+	printf("frames=%d\nfps=%f\n",frames,fps);
 	ALLEGRO_TIMER* timer = al_create_timer(1.0 / config->fps);
 	must_init(timer,"timer");
 	al_start_timer(timer);
@@ -31,6 +32,13 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 
 	float ghost_buf[frames*3];
        	al_fread(ghost_file, ghost_buf, sizeof(ghost_buf));
+	int frami = 0;
+	while(frami<frames){
+		printf("frame %d: angle=%f x=%f y=%f\n", ghost_buf[frami*3],ghost_buf[frami*3+1],
+				ghost_buf[frami*3+2]);
+
+		frami++;
+	}
 
 	//load the track file
 	TRACK_DATA track;
@@ -85,8 +93,11 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 				if(key[ALLEGRO_KEY_ESCAPE]){
 					quit = true;
 				}
-				for(int i = 0; i < ALLEGRO_KEY_MAX; i++)
+				int i = 0; 
+				while(i < ALLEGRO_KEY_MAX){
 			    		key[i] &= KEY_SEEN;
+					i++;
+				}
 				break;
 			case(ALLEGRO_EVENT_KEY_DOWN):
 				key[event.keyboard.keycode] = KEY_SEEN | KEY_RELEASED;

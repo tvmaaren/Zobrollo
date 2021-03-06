@@ -72,18 +72,25 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 
 
 
+	printf("curdir = %s\n", al_get_current_directory());
+	printf("record_dir = %s\n", al_get_current_directory());
+
 	if(!al_make_directory(paths->record)){
 		fprintf(stderr, "Error: Could not create \"%s\"\n",paths->record);
 		exit(1);
 	}
-	al_change_directory(paths->record);
+	if(!al_change_directory(paths->record)){
+		fprintf(stderr, "Error: Could not open \"%s\"\n",paths->record);
+		exit(1);
+	}
+
 	
 	ALLEGRO_FILE* record_file =al_fopen(filename,"r+");
 	if(!record_file){
 	    //file does not exist yet
-	    record_file = al_fopen(paths->record,"w+");
+	    record_file = al_fopen(filename , "w+");
 	    if(!record_file){
-		    fprintf(stderr, "Error: Could not create \"%s\"\n", paths->record);
+		    fprintf(stderr, "Error: Could not create \"%s\"\n", filename);
 	    }
 	}
 
@@ -212,8 +219,11 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				}
 
 
-				for(int i = 0; i < ALLEGRO_KEY_MAX; i++)
+				int i = 0;
+				while(i < ALLEGRO_KEY_MAX){
 			    		key[i] &= KEY_SEEN;
+					i++;
+				}
 
 				float new_x_pos=x_pos+cos(angle)*v/config->fps;
 				float new_y_pos=y_pos+sin(angle)*v/config->fps;
@@ -233,11 +243,11 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 							//record file
 							time_t pSec = time(NULL);
 							struct tm* local_time = localtime(&pSec);
-							char date_string[30];
-							#define date_string_len 20
+							#define date_string_len 18
+							char date_string[date_string_len];
 							sprintf(date_string,
 									"%d-%02d-%02d "
-									"%02d:%02d:%02d\n", 
+									"%02d%02d%02d\n", 
 									local_time->tm_year+1900,
 									local_time->tm_mon+1,
 									local_time->tm_mday,
@@ -271,16 +281,24 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 									"\"%s\"\n",ghost_filename);
 								exit(1);
 							}
+							printf("%s This should be on the same line\n"
+									,date_string);
 							strcat(ghost_filename, date_string);
 							strcat(ghost_filename, ".bin");
 							ALLEGRO_FILE* ghost_file = 
-								al_fopen(ghost_filename, "w");
-							al_fwrite(ghost_file, &frame, sizeof(int));
-							al_fwrite(ghost_file, &(config->fps),
-									sizeof(float));
-							al_fwrite(ghost_file, ghost_buf, 
-								3*frame*sizeof(float));
-							al_fclose(ghost_file);
+								al_fopen(ghost_filename, "wb");
+							if(ghost_file){
+								al_fwrite(ghost_file, &frame, 
+										sizeof(int));
+								al_fwrite(ghost_file,&(config->fps),
+										sizeof(float));
+								al_fwrite(ghost_file, ghost_buf, 
+									3*frame*sizeof(float));
+								al_fclose(ghost_file);
+							}else{
+								printf("Could not make ghost" 
+										" file\n");
+							}
 							int frame_i = 0;
 							
 							
@@ -524,6 +542,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 	
 	al_destroy_timer(countdown);
 	al_destroy_timer(timer);
+
+	al_destroy_font(splash);
 
 	free(records);
 	
