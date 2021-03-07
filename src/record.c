@@ -125,7 +125,7 @@ void show_record(ALLEGRO_FS_ENTRY *record_file_entry, char* filename, CONFIG* co
 					0,"%s  %s", records[i].date,TimeToString(records[i].time));
 
 			if(has_replay_file[i]){
-				al_change_directory(data_dir);
+				al_change_directory(paths->data);
 				if(handle_click_box(mouse_state.x, mouse_state.y, 250, i*30, 
 						350, (i+1)*30, config, "Replay")&&click){
 
@@ -135,7 +135,7 @@ void show_record(ALLEGRO_FS_ENTRY *record_file_entry, char* filename, CONFIG* co
 					strcat(ghost_filename, ".bin");
 					ALLEGRO_FS_ENTRY * ghost_entry = 
 						al_create_fs_entry(ghost_filename);
-					al_change_directory(data_dir);
+					al_change_directory(paths->data);
 					al_change_directory("tracks");
 					ALLEGRO_FS_ENTRY * track_entry =
 						al_create_fs_entry(filename);

@@ -72,6 +72,7 @@ void main(){
 	paths.ghost = ghost_path;
 
 	al_change_directory(data_dir);
+	paths.data = al_get_current_directory();
 
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/

@@ -50,5 +50,6 @@ typedef struct{
 	char* home;
 	char* record;
 	char* ghost;
+	char* data;
 }PATHS;
 // vim: cc=100

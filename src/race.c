@@ -89,7 +89,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 	    }
 	}
 
-	al_change_directory(data_dir);
+	al_change_directory(paths->data);
 
 	record *records;
 	int am_records = load_record(record_file, &records, false);
@@ -118,8 +118,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
     	al_register_event_source(queue, al_get_display_event_source(disp));
     	al_register_event_source(queue, al_get_timer_event_source(timer));
 
-	ALLEGRO_BITMAP* full_heart = al_load_bitmap(data_dir sep_str "full heart.png");
-	ALLEGRO_BITMAP* half_heart = al_load_bitmap(data_dir sep_str "half heart.png");
+	ALLEGRO_BITMAP* full_heart = al_load_bitmap("full heart.png");
+	ALLEGRO_BITMAP* half_heart = al_load_bitmap("half heart.png");
 
 	#define KEY_SEEN     1
 	#define KEY_RELEASED 2
@@ -175,8 +175,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				screen_width  = al_get_display_width(disp);
 				font = al_create_builtin_font();
 
-				full_heart = al_load_bitmap(data_dir sep_str"full heart.png");
-				half_heart = al_load_bitmap(data_dir sep_str"half heart.png");
+				full_heart = al_load_bitmap("full heart.png");
+				half_heart = al_load_bitmap("half heart.png");
 
 				redraw=true;
 				break;
@@ -369,8 +369,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 			al_clear_to_color(al_map_rgb(0,0,0));
 			drawtrack(x_pos,y_pos, -track_angle-M_PI/2,scale,screen_width, 
 					screen_height,&track);
-			
-			
+
 			//Draw hearts
 			if(config->show_hearts){
 				float heart_width = 10;
@@ -450,8 +449,6 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				
 			
 
-			
-			
 			char infotext[200];
 			infotext[0]='\0';
 			if(config->show_speed){
