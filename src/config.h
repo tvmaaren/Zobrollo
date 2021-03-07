@@ -29,8 +29,12 @@ typedef struct{
 	int	kart_color_r;
 	int	kart_color_g;
 	int	kart_color_b;
+	ALLEGRO_COLOR kart_color;
 	
 	float	kart_wheel_radius;
+
+	//camera
+	enum {AS_START=0, RELATIVE_TO_KART, RELATIVE_TO_TRACK} camera_angle;
 	
 	//information
 	_Bool show_speed;

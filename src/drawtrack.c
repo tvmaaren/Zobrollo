@@ -403,4 +403,174 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 	al_identity_transform(&transform);
 	al_use_transform(&transform);
 }
+
+int get_cur_segment(float x, float y, float* track_angle, int cur_segment, TRACK_DATA *track_data){
+	if(cur_segment==-1){
+		return -1;
+	}
+	int change=0;
+	if(track_data->segment_types[cur_segment]){//circle
+		CIRCLE_SEGMENT* segment = (CIRCLE_SEGMENT*)track_data->segments[cur_segment];
+		float d_x = x-segment->midx;
+		float d_y = y-segment->midy;
+		float angle;
+		float dist;
+		cart2pol(d_x, d_y, &angle, &dist);
+		
+		angle =InInterval(angle);
+		float seg_angle= InInterval(segment->start_angle);
+		float end_angle= InInterval(segment->start_angle+segment->delta_angle);
+		_Bool direction;
+
+		//you can split the circle in 3 parts
+		//	* -pi untill seg_angle or end_angle depending on which one
+		//		has the smallest value: part=0
+		//	* between seg_angle and end_angle: part=1
+		//	* seg_angle or end_angle untill pi depending on which one
+		//		has the greatest value: part=0
+		
+		//order=1 means that end_angle is greater than seg_angle
+		//order=0 means that seg_angle is greater than end_angle
+		
+		float a, b;
+		_Bool order;
+		if(seg_angle>end_angle){
+			a=end_angle;b=seg_angle;order=0;
+		}else{b=end_angle;a=seg_angle;order=1;}
+		_Bool part;
+		if(angle<a)part=0;
+		else if(angle>b)part=0;
+		else part=1;
+
+
+
+		//TODO: have it as a tertiary expression
+		if(segment->delta_angle>0) direction=1;
+	        else direction=0;
+		
+		if(direction)*track_angle=angle+M_PI/2;
+		else *track_angle=angle-M_PI/2;
+
+		if(!(order^direction^part)){
+			//it is of the segment, but still on track
+			//now see which way it went
+
+			//TODO: have it as a tertiary expression
+			if(fabs(InInterval(seg_angle-angle))>fabs(InInterval(end_angle-angle))){
+				cur_segment = inc_circ_count(cur_segment, track_data->n_segments-1);
+				change=1;
+			}else{
+				cur_segment = dec_circ_count(cur_segment, track_data->n_segments-1);
+				change=1;
+			}
+		}
+
+		if(change==0 && (dist>segment->r_outer||dist<segment->r_inner)){
+			(cur_segment)=-1;
+			change=1;
+		}
+
+	}else{//line
+		LINE_SEGMENT* segment = (LINE_SEGMENT*)track_data->segments[cur_segment];
+		//check if it is a horizontal rectangle
+		if(abs(segment->outer.y1-segment->outer.y2)<1 || 
+				abs(segment->outer.x1 - segment->inner.x1)<1){
+			if(segment->outer.x1>segment->outer.x2)*track_angle=M_PI;
+			else *track_angle=0;
+			if(segment->outer.x1>segment->outer.x2)*track_angle=M_PI;
+			if(segment->inner.x1<x ^ segment->inner.x2>segment->inner.x1){
+				cur_segment = dec_circ_count(cur_segment, track_data->n_segments-1);
+				change=1;
+			}
+			else if(segment->inner.x2<x ^ segment->inner.x2<segment->inner.x1){
+				cur_segment = inc_circ_count(cur_segment, track_data->n_segments-1);
+				change=1;
+			}
+			//off track
+			else if(!(segment->outer.y1<y ^ segment->inner.y1<y)){
+				(cur_segment)=-1;
+				change=1;
+			}
+		}
+		//check if it is a vertical rectangle
+		else if(abs(segment->outer.y1-segment->inner.y1)<1 || 
+				abs(segment->outer.x1 - segment->outer.x2)<1){
+			if(segment->outer.y2>segment->outer.y1)*track_angle=M_PI/2;
+			else *track_angle=-M_PI/2;
+			if(segment->inner.y1<y ^ segment->inner.y2>segment->inner.y1){
+				cur_segment = dec_circ_count(cur_segment, track_data->n_segments-1);
+				change=1;
+			}
+			else if(segment->inner.y2<y ^ segment->inner.y2<segment->inner.y1){
+				cur_segment = inc_circ_count(cur_segment, track_data->n_segments-1);
+				change=1;
+			}
+			//off track
+			else if(!(segment->outer.x1<x ^ segment->inner.x1<x)){
+				(cur_segment)=-1;
+				change=1;
+			}
+		
+			
+
+		}else{
+			float d_y = segment->inner.y2-segment->inner.y1;
+			float d_x = segment->inner.x2-segment->inner.x1;
+			*track_angle = atan(d_y/d_x);
+			if(d_x<0)*track_angle+=M_PI;
+			//check if it is outside of the track, but after its endings.
+			if(PointAndLine(segment->inner.x1,segment->inner.y1,segment->inner.x2,
+							segment->inner.y2, segment->outer.x2, 
+							segment->outer.y2)==2){
+				//y2<y1
+				if(PointAndLine(x,y,segment->inner.x1,segment->inner.y1,
+							segment->outer.x1
+							,segment->outer.y1)==2){
+					cur_segment = dec_circ_count(cur_segment, 
+							track_data->n_segments-1);
+					change=1;
+				}
+				else if(PointAndLine(x,y,segment->inner.x2,
+							segment->inner.y2,segment->outer.x2
+							,segment->outer.y2)==0){
+					cur_segment = inc_circ_count(cur_segment, 
+							track_data->n_segments-1);
+					change=1;
+				}
+			}else{
+				//y2>y1
+				if(PointAndLine(x,y,segment->inner.x1,segment->inner.y1,
+							segment->outer.x1
+							,segment->outer.y1)==0){
+					cur_segment = dec_circ_count(cur_segment, 
+							track_data->n_segments-1);
+					change=1;
+				}
+				else if(PointAndLine(x,y,segment->outer.x2,segment->outer.y2,
+							segment->inner.x2
+							,segment->inner.y2)==2){
+					cur_segment = inc_circ_count(cur_segment, 
+							track_data->n_segments-1);
+					change=1;
+				}
+			}
+		}
+
+		//check if it is outside of the track sideways
+		if(change==0 && (PointAndLine(x, y, segment->outer.x1,segment->outer.y1,
+				segment->outer.x2,segment->outer.y2)
+				==PointAndLine(x, y, segment->inner.x1,segment->inner.y1,
+				segment->inner.x2,segment->inner.y2))){
+			cur_segment=-1;
+			change=1;
+		}
+	}
+
+	//if the segment has changed it has to check if it is in a valid position in the
+	//new segment.
+	if(change==1){
+		cur_segment=get_cur_segment(x, y, track_angle, cur_segment, track_data); 
+	}
+	return(cur_segment);
+}
 // vim: cc=100

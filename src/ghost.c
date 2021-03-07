@@ -65,6 +65,7 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 	memset(key, 0, sizeof(key));
 
 	int i =0;
+	int segment = 0;
 	while(i<frames){
 		al_clear_to_color(al_map_rgb(0,0,0));
 		al_wait_for_event(queue,&event);
@@ -112,9 +113,18 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 				exit(1);
 				break;
 		}
+		float x = ghost_buf[i*3+1];
+		float y = ghost_buf[i*3+2];
+		float angle = ghost_buf[i*3];
+		float track_angle;
+		if(config->camera_angle==RELATIVE_TO_TRACK){
+			//find the segment the kart is in
+			float tmpvar;
+			segment = get_cur_segment(x, y, &track_angle, segment, &track);
+		}
 
 		drawframe(ghost_buf[i*3+1], ghost_buf[i*3+2], ghost_buf[i*3], scale, screen_width, 
-				screen_height, &track, config);
+				screen_height, &track, track_angle, config);
 		al_flip_display();
 		if(quit)
 			break;

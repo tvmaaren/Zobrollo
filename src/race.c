@@ -36,6 +36,7 @@ e-mail:thomas.v.maaren@outlook.com
 #include "race.h"
 #include "misc.h"
 #include "record.h"
+#include "drawframe.h"
 
 //the different modes of play
 #define COUNTDOWN 0
@@ -46,8 +47,7 @@ e-mail:thomas.v.maaren@outlook.com
 char * SecToString(double  secs);//Easily display time
 int inc_circ_count(int i, int max);//Make it loop round forwards
 int dec_circ_count(int i, int max);//Make it loop round backwards
-int GetCurSegment(float x, float y, float* track_angle, int cur_segment, TRACK_DATA track_data);
-int PointAndLine(float x, float y, float x1, float y1, float x2, float y2);
+int GetCurSegment(float x, float y, float* track_angle, int cur_segment, TRACK_DATA* track_data);
 float InInterval(float a);//Have angle between -pi and pi
 void SaveRace(float *buf, int am_frames, FILE *save_file, float fps);//Saves the race in a file
 
@@ -223,8 +223,8 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				float new_x_pos=x_pos+cos(angle)*v/config->fps;
 				float new_y_pos=y_pos+sin(angle)*v/config->fps;
 
-				int new_cur_segment=GetCurSegment(new_x_pos, new_y_pos, 
-						&track_angle, cur_segment, track);
+				int new_cur_segment=get_cur_segment(new_x_pos, new_y_pos,
+						&track_angle, cur_segment, &track);
 				if(new_cur_segment!=-1){
 					
 					if(mode==PLAYING&&max_segment==track.n_segments-1 && 
@@ -367,8 +367,11 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				stopwatch=al_get_time()-start_time;
 			}
 			al_clear_to_color(al_map_rgb(0,0,0));
-			drawtrack(x_pos,y_pos, -track_angle-M_PI/2,scale,screen_width, 
-					screen_height,&track);
+			drawframe(x_pos, y_pos, angle, scale, screen_width, screen_height, 
+					&track, track_angle, config);
+
+			/*drawtrack(x_pos,y_pos, -track_angle-M_PI/2,scale,screen_width, 
+					screen_height,&track);*/
 
 			//Draw hearts
 			if(config->show_hearts){
@@ -392,13 +395,13 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				}
 			}
 			
-			//draw player karts
+			/*//draw player karts
 			ALLEGRO_COLOR kart_color=al_map_rgb(config->kart_color_r,
 					config->kart_color_g,config->kart_color_b);
 			kart_t main_kart = {angle, x_pos, y_pos, config->kart_width, 
 				config->kart_height, kart_color};
 			drawkart(x_pos, y_pos,-track_angle-M_PI/2, scale, screen_width, 
-					screen_height,  main_kart);
+					screen_height,  main_kart);*/
 
 			//display the map
 			if(config->show_map){
@@ -432,7 +435,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				float doty=y_pos;
 				al_transform_coordinates(&transform, &dotx, &doty);
 
-				al_draw_filled_circle(dotx, doty, 3, kart_color);
+				al_draw_filled_circle(dotx, doty, 3, config->kart_color);
 				al_identity_transform(&transform);
 				al_use_transform(&transform);
 
@@ -547,235 +550,4 @@ char * SecToString(double  secs){
 	return ret;
 }
 
-
-
-
-
-const char* GetConfVal(ALLEGRO_CONFIG* cfg, char* key){
-	const char * value = al_get_config_value(cfg, "", key);
-	if(value==NULL){
-		fprintf(stderr, "%s is not a key in \"config.cfg\"\n", key);
-		exit(1);
-	}
-	return value;
-}
-
-_Bool GetConfBool(ALLEGRO_CONFIG* cfg, char*key){
-	const char * string= GetConfVal(cfg, key);
-	if(!strcmp(string, "true"))return(1);
-	else if(!strcmp(string, "false"))return(0);
-	else{
-		fprintf(stderr, "%s Should be true or false\n", key);
-		exit(1);
-	}
-}
-
-
-
-
-int inc_circ_count(int i, int max){
-	i++;
-	if(i>max)i=0;
-	return i;
-}
-int dec_circ_count(int i, int max){
-	i--;
-	if(i<0)i=max;
-	return i;
-}
-
-int GetCurSegment(float x, float y, float* track_angle, int cur_segment, TRACK_DATA track_data){
-	if(cur_segment==-1){
-		return -1;
-	}
-	int change=0;
-	if(track_data.segment_types[cur_segment]){//circle
-		CIRCLE_SEGMENT* segment = (CIRCLE_SEGMENT*)track_data.segments[cur_segment];
-		float d_x = x-segment->midx;
-		float d_y = y-segment->midy;
-		float angle;
-		float dist;
-		cart2pol(d_x, d_y, &angle, &dist);
-		
-		angle =InInterval(angle);
-		float seg_angle= InInterval(segment->start_angle);
-		float end_angle= InInterval(segment->start_angle+segment->delta_angle);
-		_Bool direction;
-
-		//you can split the circle in 3 parts
-		//	* -pi untill seg_angle or end_angle depending on which one
-		//		has the smallest value: part=0
-		//	* between seg_angle and end_angle: part=1
-		//	* seg_angle or end_angle untill pi depending on which one
-		//		has the greatest value: part=0
-		
-		//order=1 means that end_angle is greater than seg_angle
-		//order=0 means that seg_angle is greater than end_angle
-		
-		float a, b;
-		_Bool order;
-		if(seg_angle>end_angle){
-			a=end_angle;b=seg_angle;order=0;
-		}else{b=end_angle;a=seg_angle;order=1;}
-		_Bool part;
-		if(angle<a)part=0;
-		else if(angle>b)part=0;
-		else part=1;
-
-
-
-		//TODO: have it as a tertiary expression
-		if(segment->delta_angle>0) direction=1;
-	        else direction=0;
-		
-		if(direction)*track_angle=angle+M_PI/2;
-		else *track_angle=angle-M_PI/2;
-
-		if(!(order^direction^part)){
-			//it is of the segment, but still on track
-			//now see which way it went
-
-			//TODO: have it as a tertiary expression
-			if(fabs(InInterval(seg_angle-angle))>fabs(InInterval(end_angle-angle))){
-				cur_segment = inc_circ_count(cur_segment, track_data.n_segments-1);
-				change=1;
-			}else{
-				cur_segment = dec_circ_count(cur_segment, track_data.n_segments-1);
-				change=1;
-			}
-		}
-
-		if(change==0 && (dist>segment->r_outer||dist<segment->r_inner)){
-			(cur_segment)=-1;
-			change=1;
-		}
-
-	}else{//line
-		LINE_SEGMENT* segment = (LINE_SEGMENT*)track_data.segments[cur_segment];
-		//check if it is a horizontal rectangle
-		if(abs(segment->outer.y1-segment->outer.y2)<1 || 
-				abs(segment->outer.x1 - segment->inner.x1)<1){
-			if(segment->outer.x1>segment->outer.x2)*track_angle=M_PI;
-			else *track_angle=0;
-			if(segment->outer.x1>segment->outer.x2)*track_angle=M_PI;
-			if(segment->inner.x1<x ^ segment->inner.x2>segment->inner.x1){
-				cur_segment = dec_circ_count(cur_segment, track_data.n_segments-1);
-				change=1;
-			}
-			else if(segment->inner.x2<x ^ segment->inner.x2<segment->inner.x1){
-				cur_segment = inc_circ_count(cur_segment, track_data.n_segments-1);
-				change=1;
-			}
-			//off track
-			else if(!(segment->outer.y1<y ^ segment->inner.y1<y)){
-				(cur_segment)=-1;
-				change=1;
-			}
-		}
-		//check if it is a vertical rectangle
-		else if(abs(segment->outer.y1-segment->inner.y1)<1 || 
-				abs(segment->outer.x1 - segment->outer.x2)<1){
-			if(segment->outer.y2>segment->outer.y1)*track_angle=M_PI/2;
-			else *track_angle=-M_PI/2;
-			if(segment->inner.y1<y ^ segment->inner.y2>segment->inner.y1){
-				cur_segment = dec_circ_count(cur_segment, track_data.n_segments-1);
-				change=1;
-			}
-			else if(segment->inner.y2<y ^ segment->inner.y2<segment->inner.y1){
-				cur_segment = inc_circ_count(cur_segment, track_data.n_segments-1);
-				change=1;
-			}
-			//off track
-			else if(!(segment->outer.x1<x ^ segment->inner.x1<x)){
-				(cur_segment)=-1;
-				change=1;
-			}
-		
-			
-
-		}else{
-			float d_y = segment->inner.y2-segment->inner.y1;
-			float d_x = segment->inner.x2-segment->inner.x1;
-			*track_angle = atan(d_y/d_x);
-			if(d_x<0)*track_angle+=M_PI;
-			//check if it is outside of the track, but after its endings.
-			if(PointAndLine(segment->inner.x1,segment->inner.y1,segment->inner.x2,
-							segment->inner.y2, segment->outer.x2, 
-							segment->outer.y2)==2){
-				//y2<y1
-				if(PointAndLine(x,y,segment->inner.x1,segment->inner.y1,
-							segment->outer.x1
-							,segment->outer.y1)==2){
-					cur_segment = dec_circ_count(cur_segment, 
-							track_data.n_segments-1);
-					change=1;
-				}
-				else if(PointAndLine(x,y,segment->inner.x2,
-							segment->inner.y2,segment->outer.x2
-							,segment->outer.y2)==0){
-					cur_segment = inc_circ_count(cur_segment, 
-							track_data.n_segments-1);
-					change=1;
-				}
-			}else{
-				//y2>y1
-				if(PointAndLine(x,y,segment->inner.x1,segment->inner.y1,
-							segment->outer.x1
-							,segment->outer.y1)==0){
-					cur_segment = dec_circ_count(cur_segment, 
-							track_data.n_segments-1);
-					change=1;
-				}
-				else if(PointAndLine(x,y,segment->outer.x2,segment->outer.y2,
-							segment->inner.x2
-							,segment->inner.y2)==2){
-					cur_segment = inc_circ_count(cur_segment, 
-							track_data.n_segments-1);
-					change=1;
-				}
-			}
-		}
-
-		//check if it is outside of the track sideways
-		if(change==0 && (PointAndLine(x, y, segment->outer.x1,segment->outer.y1,
-				segment->outer.x2,segment->outer.y2)
-				==PointAndLine(x, y, segment->inner.x1,segment->inner.y1,
-				segment->inner.x2,segment->inner.y2))){
-			cur_segment=-1;
-			change=1;
-		}
-	}
-
-	//if the segment has changed it has to check if it is in a valid position in the
-	//new segment.
-	if(change==1){
-		cur_segment=GetCurSegment(x, y, track_angle, cur_segment, track_data); 
-	}
-	return(cur_segment);
-}
-
-//check if the point is under, above or on the line
-//
-//Returns:
-//0: below the line
-//1: on the line
-//2: above the line
-int PointAndLine(float x, float y, float x1, float y1, float x2, float y2){
-	float a = (y2-y1)/(x2-x1);
-	float b = y2-a*x2;
-	float line_val = a*x+b;
-	return (line_val==y) + (line_val<y)*2;
-}
-
-
-float InInterval(float a){
-	while(a>M_PI){
-		a-=2*M_PI;
-	}
-	while(a<-M_PI){
-		a+=2*M_PI;
-	}
-	return a;
-
-}
 // vim: cc=100

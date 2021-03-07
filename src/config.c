@@ -60,8 +60,25 @@ void get_config(CONFIG* config, const ALLEGRO_CONFIG* cfg){
 	config->kart_color_r=atoi(al_get_config_value(cfg,"kart", "color_r"));
 	config->kart_color_g=atoi(al_get_config_value(cfg,"kart", "color_g"));
 	config->kart_color_b=atoi(al_get_config_value(cfg,"kart", "color_b"));
+	config->kart_color=al_map_rgb(config->kart_color_r,config->kart_color_g,
+			config->kart_color_b);
 	
 	config->kart_wheel_radius=atof(al_get_config_value(cfg,"kart", "wheel_radius"));
+
+	//camera
+	const char* camera_angle_string = al_get_config_value(cfg, "camera", "angle");
+	if(!strcmp(camera_angle_string,"as_start"))
+		config->camera_angle =	AS_START;
+	else if(!strcmp(camera_angle_string,"relative_to_kart"))
+		config->camera_angle = RELATIVE_TO_KART;
+	else if(!strcmp(camera_angle_string,"relative_to_track"))
+		config->camera_angle = RELATIVE_TO_TRACK;
+	else{
+		fprintf(stderr, "Error: \"%s\" is an invalid value for camera angle\n", 
+				camera_angle_string);
+		exit(1);
+	}
+
 
 
 	//information

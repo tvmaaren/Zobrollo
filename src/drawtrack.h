@@ -56,5 +56,5 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 		TRACK_DATA *track_data);
 void loadtrack(ALLEGRO_FILE* file, TRACK_DATA* track_data);
 void cart2pol(float x, float y, float *angle, float *dist);
-
+int get_cur_segment(float x, float y, float* track_angle, int cur_segment, TRACK_DATA *track_data);
 // vim: cc=100

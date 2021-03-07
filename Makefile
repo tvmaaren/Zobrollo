@@ -10,13 +10,23 @@ libs=-lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_i
 default: $(OBJ)
 	cc $(OBJ) $(libs) -o zobrollo
 
-%.o : %.c
-	cc -o $@ -c $<
+src/main.o: src/main.c src/config.o src/misc.o src/file_paths.h src/race.o src/record.o src/ghost.o src/gui.o
+src/race.o: src/drawtrack.o src/kart.o src/config.o src/file_paths.h src/race.c src/misc.o src/record.o src/drawframe.o
+src/record.o: src/file_paths.h src/config.o src/record.c src/misc.o src/gui.o src/ghost.o
+src/ghost.o:  src/config.o src/drawtrack.o src/misc.o src/ghost.c src/drawframe.o
+src/drawframe.o: src/drawframe.c src/config.o src/kart.o src/drawtrack.o src/misc.o
+src/drawtrack.o:  src/drawtrack.c src/misc.o
+src/gui.o:  src/config.o src/gui.c
+src/config.o: src/config.c src/file_paths.h
+src/kart.o: src/kart.c
+src/misc.o: src/misc.c
+src/file_paths.h:
+
 
 clean:
 	rm src/*.o zobrollo
 
-install: main
+install: default
 	install -Dm755 zobrollo ${DESTDIR}${BINDIR}/zobrollo
 	install -Dm644 config.cfg ${DESTDIR}${DATADIR}/config.cfg
 	install -Dm644 full\ heart.png ${DESTDIR}${DATADIR}/full\ heart.png

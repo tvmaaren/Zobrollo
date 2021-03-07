@@ -19,9 +19,12 @@ e-mail:thomas.v.maaren@outlook.com
 */
 
 
-
+#include <allegro5/allegro5.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+
+#include "misc.h"
 
 void must_init(_Bool test, const char *description){
 	if(test) return;
@@ -39,4 +42,38 @@ void add_element(void** list, int *required, int *available, size_t element_size
 	}
 	return;
 }
+
+float InInterval(float a){
+	while(a>M_PI){
+		a-=2*M_PI;
+	}
+	while(a<-M_PI){
+		a+=2*M_PI;
+	}
+	return a;
+
+}
+//check if the point is under, above or on the line
+//
+//Returns:
+//0: below the line
+//1: on the line
+//2: above the line
+int PointAndLine(float x, float y, float x1, float y1, float x2, float y2){
+	float a = (y2-y1)/(x2-x1);
+	float b = y2-a*x2;
+	float line_val = a*x+b;
+	return (line_val==y) + (line_val<y)*2;
+}
+int inc_circ_count(int i, int max){
+	i++;
+	if(i>max)i=0;
+	return i;
+}
+int dec_circ_count(int i, int max){
+	i--;
+	if(i<0)i=max;
+	return i;
+}
+
 // vim: cc=100
