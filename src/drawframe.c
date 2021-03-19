@@ -18,7 +18,6 @@ void drawmap(int am_karts,kart_t *karts//0th element is seen as main kart
 	float scale=(max_x-min_x)/(track->max_min[track_max_x]-track->max_min[track_min_x]);
 	if((max_y-min_y)/(track->max_min[track_min_y] - track->max_min[track_max_y])<scale)
 		scale=(max_y-min_y)/(track->max_min[track_min_y] - track->max_min[track_max_y]);
-	printf("scale:%f\n",scale);
 
 
 	float midx = (min_x+max_x)/2;
