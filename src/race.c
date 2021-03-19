@@ -137,8 +137,9 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 	ALLEGRO_FILE* ghost_record_file;
 
 	int n_karts = 1;
+	_Bool found_ghost_file=false;
 	if(config->play_against_ghost){
-		_Bool found_file=false;
+		printf("play_against_ghost is enabled\n");
 		al_change_directory(paths->ghost);
 		al_change_directory(filename);
 		int i =0;
@@ -147,22 +148,23 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 			strcpy(ghost_record_filename, records[i].date);
 			strcat(ghost_record_filename, ".bin");
 			
-			ghost_record_file = al_fopen(ghost_record_filename, "r");
+			ghost_record_file = al_fopen(ghost_record_filename, "rb");
 			if(ghost_record_file){
-				found_file = true;
+				printf("found\n");
+				found_ghost_file = true;
 				break;
 			}
+			else
+				printf("tried but did not find\n");
 			i++;
 		}
-		if(found_file){
+		if(found_ghost_file){
 			al_fread(ghost_record_file, &frames_record, sizeof(frames_record));
 			al_fread(ghost_record_file, &fps_record, sizeof(fps_record));
 			record_ghost_buf = malloc(sizeof(float)*frames_record*3);
 			al_fread(ghost_record_file, record_ghost_buf, 3*sizeof(float)*frames_record);
 			al_fclose(ghost_record_file);
 			n_karts =2;
-		}else{
-			config->play_against_ghost=false;
 		}
 		al_change_directory(paths->data);
 	}
@@ -257,6 +259,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 
 				if(key[ALLEGRO_KEY_ESCAPE]){
 					EndProgram = true;
+					printf("escape\n");
 				}
 
 
@@ -309,7 +312,13 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 								//remove \n
 								date_string[date_string_len-1]=
 									'\0';
-								al_change_directory(paths->ghost);
+								if(!al_change_directory(paths->ghost)){
+									al_make_directory(paths->ghost);
+									if(!al_change_directory(paths->ghost)){
+										fprintf(stderr,"Could not make directory: %s\n",paths->ghost);
+										exit(1);
+									}
+								}
 								
 								char ghost_filename[
 									strlen(filename)+1+
@@ -328,9 +337,11 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 								}
 								strcat(ghost_filename,date_string);
 								strcat(ghost_filename, ".bin");
+								printf("%s\n", al_get_current_directory());
 								ALLEGRO_FILE* ghost_file = 
 									al_fopen(ghost_filename,
 									"wb");
+								printf("%s: %p\n",ghost_filename,ghost_file);
 								if(ghost_file){
 									al_fwrite(ghost_file, 
 										&frame,sizeof(int));
@@ -422,7 +433,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				stopwatch=al_get_time()-start_time;
 			}
 			al_clear_to_color(al_map_rgb(0,0,0));
-			if(config->play_against_ghost){
+			if(found_ghost_file){
 				karts[1].angle = record_ghost_buf[frame*3];
 				karts[1].x=record_ghost_buf[frame*3+1];
 				karts[1].y=record_ghost_buf[frame*3+2];
@@ -538,8 +549,10 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 
 		}
 	}
+	printf("out of while loop\n");
 	al_destroy_bitmap(half_heart);
 	al_destroy_bitmap(full_heart);
+	printf("after destroy bitmap\n");
 
 	al_destroy_event_queue(queue);
 	
@@ -548,9 +561,17 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 
 	al_destroy_font(splash);
 	al_destroy_font(font);
+	printf("after destroy other stuff\n");
+
+	al_fclose(record_file);
 
 	free(records);
-	free(record_ghost_buf);
+	printf("free(records)\n");
+	if(found_ghost_file){
+		printf("found_ghost_file\n");
+		free(record_ghost_buf);
+	}
+	printf("%s\n",al_get_current_directory());
 	
 }
 
