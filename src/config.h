@@ -54,9 +54,8 @@ typedef struct{
 	float	life_per_heart;
 
 	//ghost
-	int	ghost_color_r;
-	int	ghost_color_g;
-	int	ghost_color_b;
+	_Bool 	save_ghost;
+	_Bool	play_against_ghost;
 	
 	//button
 

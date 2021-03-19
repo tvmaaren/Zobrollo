@@ -99,9 +99,8 @@ void get_config(CONFIG* config, const ALLEGRO_CONFIG* cfg){
 	config->life_per_heart= atof(al_get_config_value(cfg, "information", "life_per_heart"));
 
 	//ghost
-	config->ghost_color_r=atoi(al_get_config_value(cfg,"ghost", "color_r"));
-	config->ghost_color_g=atoi(al_get_config_value(cfg,"ghost", "color_g"));
-	config->ghost_color_b=atoi(al_get_config_value(cfg,"ghost", "color_b"));
+	config->save_ghost=get_config_bool(cfg, "ghost", "save_ghost");
+	config->play_against_ghost=get_config_bool(cfg, "ghost","play_against_ghost");
 	
 	//button
 

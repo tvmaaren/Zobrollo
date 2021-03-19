@@ -37,7 +37,7 @@ e-mail:thomas.v.maaren@outlook.com
 #include "ghost.h"
 #include "gui.h"
 
-#define version "0.2.1"
+#define version "0.2.2"
 
 #define thickness 2
 

@@ -184,107 +184,173 @@ int GetSimpleSegments(void*** segments, _Bool** segment_types, float* ptrackwidt
 	}
 }
 void loadtrack(ALLEGRO_FILE* file, TRACK_DATA* track_data){
-		void ** simple_segments;
-		track_data->n_segments = GetSimpleSegments(&simple_segments, 
-				&(track_data->segment_types), &(track_data->trackwidth), file);
-		track_data->segments = malloc(sizeof(void*)*track_data->n_segments);
-		
-		//the track starts at (0,0) pointing upwards
-		float track_y=0;
-		float track_x=0;
-		float track_angle=M_PI/2;
+	void ** simple_segments;
+	track_data->n_segments = GetSimpleSegments(&simple_segments, 
+			&(track_data->segment_types), &(track_data->trackwidth), file);
+	track_data->segments = malloc(sizeof(void*)*track_data->n_segments);
+	
+	//the track starts at (0,0) pointing upwards
+	float track_y=0;
+	float track_x=0;
+	float track_angle=M_PI/2;
 
-		//this function shall approximate these values, because this will make it easier 
-		//to draw the map of the track correctly
-		track_data->max_x=0;
-		track_data->max_y=0;
-		track_data->min_x=0;
-		track_data->min_y=0;
+	//this function shall approximate these values, because this will make it easier 
+	//to draw the map of the track correctly
+	track_data->max_min[0]=0;
+	track_data->max_min[1]=0;
+	track_data->max_min[2]=0;
+	track_data->max_min[3]=0;
 
-		//go through all the segments
-		int i=0;
-		while(i<track_data->n_segments){
-			if(track_x>track_data->max_x)track_data->max_x=track_x;
-			if(track_x<track_data->min_x)track_data->min_x=track_x;
-			if(track_y>track_data->max_x)track_data->max_y=track_y;
-			if(track_y<track_data->min_x)track_data->min_y=track_y;
+	//go through all the segments
+	int i=0;
+	while(i<track_data->n_segments){
+		/*if(track_x>track_data->max_x)track_data->max_x=track_x;
+		if(track_x<track_data->min_x)track_data->min_x=track_x;
+		if(track_y>track_data->max_x)track_data->max_y=track_y;
+		if(track_y<track_data->min_x)track_data->min_y=track_y;*/
 
-			if(track_data->segment_types[i]){//circle
-				SIMPLE_CIRCLE_SEGMENT*simple_segment=(SIMPLE_CIRCLE_SEGMENT*)
-					simple_segments[i];
-				CIRCLE_SEGMENT* circle = malloc(sizeof(CIRCLE_SEGMENT));
-				if(simple_segment->left_right){
-					//left
-					circle->start_angle=track_angle-M_PI/2;
-					track_angle+=simple_segment->angle;
-					circle->delta_angle=simple_segment->angle;
-				}else{
-					//right
-					circle->start_angle=track_angle+M_PI/2;
-					track_angle-=simple_segment->angle;
-					circle->delta_angle=-simple_segment->angle;
-				}
-				
-				circle->r_inner=simple_segment->radius-track_data->trackwidth/2;
-				circle->r_outer=simple_segment->radius+track_data->trackwidth/2;
-				circle->r_mid  =simple_segment->radius;
-
-				circle->midx=cos(circle->start_angle-M_PI)*
-					simple_segment->radius+track_x;
-				circle->midy=sin(circle->start_angle-M_PI)*
-					simple_segment->radius+track_y;
-
-				track_x=circle->midx+cos(circle->start_angle+circle->delta_angle)
-					*simple_segment->radius;
-				track_y=circle->midy+sin(circle->start_angle+circle->delta_angle)
-					*simple_segment->radius;
-
-				(track_data->segments)[i]=circle;
-
-			}else{//line
-				SIMPLE_LINE_SEGMENT*simple_segment=(SIMPLE_LINE_SEGMENT*)
-					simple_segments[i];
-				LINE_SEGMENT* line = malloc(sizeof(LINE_SEGMENT));
-
-				float d_x=cos(track_angle+M_PI/2)* track_data->trackwidth/2;
-				float d_y=sin(track_angle+M_PI/2)* track_data->trackwidth/2;
-
-				//begin of segment
-				line->inner.x1=track_x+d_x;
-				line->inner.y1=track_y+d_y;
-
-				line->outer.x1=track_x-d_x;
-				line->outer.y1=track_y-d_y;
-
-				track_x+=cos(track_angle)*simple_segment->length;
-				track_y+=sin(track_angle)*simple_segment->length;
-				line->length = simple_segment->length;
-				line->angle = track_angle;
-
-				//end of segment
-				line->inner.x2=track_x+d_x;
-				line->inner.y2=track_y+d_y;
-
-				line->outer.x2=track_x-d_x;
-				line->outer.y2=track_y-d_y;
-
-				track_data->segments[i]=line;
+		if(track_data->segment_types[i]){//circle
+			SIMPLE_CIRCLE_SEGMENT*simple_segment=(SIMPLE_CIRCLE_SEGMENT*)
+				simple_segments[i];
+			CIRCLE_SEGMENT* circle = malloc(sizeof(CIRCLE_SEGMENT));
+			float end_angle;
+			if(simple_segment->left_right){
+				//left
+				circle->start_angle=track_angle-M_PI/2;
+				track_angle+=simple_segment->angle;
+				circle->delta_angle=simple_segment->angle;
+				end_angle = circle->start_angle-circle->delta_angle;
+			}else{
+				//right
+				circle->start_angle=track_angle+M_PI/2;
+				track_angle-=simple_segment->angle;
+				circle->delta_angle=-simple_segment->angle;
+				end_angle = circle->start_angle+circle->delta_angle;
 			}
-			//free the simple segment
-			free(simple_segments[i]);
+			//find max/min x/y position
+			
+			circle->r_inner=simple_segment->radius-track_data->trackwidth/2;
+			circle->r_outer=simple_segment->radius+track_data->trackwidth/2;
+			circle->r_mid  =simple_segment->radius;
 
-			i++;
+			circle->midx=cos(circle->start_angle-M_PI)*
+				simple_segment->radius+track_x;
+			circle->midy=sin(circle->start_angle-M_PI)*
+				simple_segment->radius+track_y;
+
+			track_x=circle->midx+cos(circle->start_angle+circle->delta_angle)
+				*simple_segment->radius;
+			track_y=circle->midy+sin(circle->start_angle+circle->delta_angle)
+				*simple_segment->radius;
+
+			(track_data->segments)[i]=circle;
+
+			int max_i=0;
+			while(max_i<4){
+				//check if angle is between begin and end of bend
+				_Bool between;
+				float max_angle = max_i*M_PI/2;
+				//find a period of max_angle that fits between begin and
+				//end of bend
+				max_angle+=(int)(circle->start_angle/(2*M_PI))*2*M_PI;
+
+				if(simple_segment->left_right){//left
+					between=(circle->start_angle > max_angle)&&
+						(max_angle > end_angle);
+					if(!between){
+						//try the period before that
+						max_angle-=2*M_PI;
+						between=(circle->start_angle > max_angle)&&
+							(max_angle> end_angle);
+					}
+				}else{
+					between=(circle->start_angle < max_angle)&&
+						(max_i*M_PI/2 < end_angle);
+					if(!between){
+						//try the period after that
+						max_angle+=2*M_PI;
+						between=(circle->start_angle < max_angle)&&
+							(max_i*M_PI/2 > end_angle);
+					}
+				}if(between){
+					float circ_max;
+					switch(max_i){
+						case(track_max_x):
+							circ_max = circle->midx+
+								circle->r_outer;
+							goto check_highest;
+						case(track_max_y):
+							circ_max = circle->midy-
+								circle->r_outer;
+							goto check_lowest;
+						check_highest:
+							if(circ_max>track_data->max_min[max_i])
+								track_data->max_min[max_i]=
+									circ_max;
+							break;
+
+						case(track_min_x):
+							circ_max = circle->midx-
+								circle->r_outer;
+							goto check_lowest;
+						case(track_min_y):
+							circ_max = circle->midy+
+								circle->r_outer;
+							goto check_highest;
+						check_lowest:
+							if(circ_max<track_data->max_min[max_i])
+								track_data->max_min[max_i]=
+									circ_max;
+							break;
+					}
+
+				}
+				max_i++;
+			}
+
+		}else{//line
+			SIMPLE_LINE_SEGMENT*simple_segment=(SIMPLE_LINE_SEGMENT*)
+				simple_segments[i];
+			LINE_SEGMENT* line = malloc(sizeof(LINE_SEGMENT));
+
+			float d_x=cos(track_angle+M_PI/2)* track_data->trackwidth/2;
+			float d_y=sin(track_angle+M_PI/2)* track_data->trackwidth/2;
+
+			//begin of segment
+			line->inner.x1=track_x+d_x;
+			line->inner.y1=track_y+d_y;
+
+			line->outer.x1=track_x-d_x;
+			line->outer.y1=track_y-d_y;
+
+			track_x+=cos(track_angle)*simple_segment->length;
+			track_y+=sin(track_angle)*simple_segment->length;
+			line->length = simple_segment->length;
+			line->angle = track_angle;
+
+			//end of segment
+			line->inner.x2=track_x+d_x;
+			line->inner.y2=track_y+d_y;
+
+			line->outer.x2=track_x-d_x;
+			line->outer.y2=track_y-d_y;
+
+			track_data->segments[i]=line;
 		}
-		
+		//free the simple segment
+		free(simple_segments[i]);
 
-		free(simple_segments);
+		i++;
+	}
+	
+
+	free(simple_segments);
 }
 
 
 
 //make sure you have initialised allegro before running this function
-void drawtrack(float x, float y, float angle, float scale, int width, int height, 
-		TRACK_DATA *track_data){
+void drawtrack(TRACK_DATA *track_data, float scale){
 	float dist_milestone=0;
 	
 	//TODO: track settings should be stored in the track file not defined in source
@@ -293,14 +359,6 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 	track_data->milestone_interval = 20;
 	track_data->milestone_size = 4;
 	track_data->border_width = 4;
-
-	ALLEGRO_TRANSFORM transform;
-	al_identity_transform(&transform);
-	al_translate_transform(&transform, -x,-y );
-	al_rotate_transform(&transform , angle);
-	al_scale_transform(&transform, scale,scale);
-	al_translate_transform(&transform, width/2,height/2);
-	al_use_transform(&transform);
 
 	//The width of the track border is never allowed to become
 	//less than 2 pixels after it has been transformed
@@ -400,8 +458,6 @@ void drawtrack(float x, float y, float angle, float scale, int width, int height
 		}
 		i++;
 	}
-	al_identity_transform(&transform);
-	al_use_transform(&transform);
 }
 
 int get_cur_segment(float x, float y, float* track_angle, int cur_segment, TRACK_DATA *track_data){

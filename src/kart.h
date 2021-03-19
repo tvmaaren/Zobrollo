@@ -3,12 +3,10 @@ typedef struct{
 	float x;
 	float y;
 	
-	float kart_width;
- 	float kart_height;
 	ALLEGRO_COLOR color;
 }kart_t;
 
 void drawkart(float x,float y, float angle, float scale, int width, int height, 
-		kart_t kart);
+		kart_t kart, CONFIG* config);
 
 // vim: cc=100

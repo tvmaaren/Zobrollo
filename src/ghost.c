@@ -10,9 +10,8 @@
 #include "drawtrack.h"
 #include "misc.h"
 #include "ghost.h"
+#include "kart.h"
 #include "drawframe.h"
-
-
 
 void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entry, 
 		CONFIG* config, ALLEGRO_DISPLAY* disp){
@@ -122,9 +121,9 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 			float tmpvar;
 			segment = get_cur_segment(x, y, &track_angle, segment, &track);
 		}
-
-		drawframe(ghost_buf[i*3+1], ghost_buf[i*3+2], ghost_buf[i*3], scale, screen_width, 
-				screen_height, &track, track_angle, config);
+		kart_t kart = {ghost_buf[i*3],ghost_buf[i*3+1], ghost_buf[i*3+2], 
+			config->kart_color};
+		drawframe(1, &kart, scale, screen_width,screen_height,&track,track_angle,config);
 		al_flip_display();
 		if(quit)
 			break;
