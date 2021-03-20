@@ -70,7 +70,6 @@ void main(){
 	strcpy(ghost_path, paths.home);
 	strcat(ghost_path, local_dir sep_str "ghosts");
 	paths.ghost = ghost_path;
-	printf("ghost path:%s\n", paths.ghost);
 
 	al_change_directory(data_dir);
 	paths.data = al_get_current_directory();
@@ -346,7 +345,6 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 				if(mouse_in_box && click){
 
 					click_func(files[i], file_names[i], config, disp, paths);
-					printf("back from race\n");
 					back_from_race=true;
 					al_flush_event_queue(queue);
 					break;

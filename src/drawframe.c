@@ -45,7 +45,7 @@ void drawmap(int am_karts,kart_t *karts//0th element is seen as main kart
 		
 		al_use_transform(&identity);
 
-		al_draw_filled_circle(dotx, doty, 3, config->kart_color);
+		al_draw_filled_circle(dotx, doty, 3, karts[i].color);
 		i++;
 	}
 }
