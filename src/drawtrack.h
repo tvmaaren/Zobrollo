@@ -57,4 +57,10 @@ void drawtrack(TRACK_DATA *track_data, float scale);
 void loadtrack(ALLEGRO_FILE* file, TRACK_DATA* track_data);
 void cart2pol(float x, float y, float *angle, float *dist);
 int get_cur_segment(float x, float y, float* track_angle, int cur_segment, TRACK_DATA *track_data);
+void drawmap(float min_x //relative to the middle of the screen
+		,float min_y //relative to the middle of the screen
+		,float max_x //relative to the middle of the screen
+		,float max_y //relative to the middle of the screen
+		,ALLEGRO_TRANSFORM* transform//returns the transformation it used
+		,TRACK_DATA* track);
 // vim: cc=100

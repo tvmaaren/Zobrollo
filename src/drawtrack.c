@@ -629,4 +629,36 @@ int get_cur_segment(float x, float y, float* track_angle, int cur_segment, TRACK
 	}
 	return(cur_segment);
 }
+void drawmap(float min_x //relative to the middle of the screen
+		,float min_y //relative to the middle of the screen
+		,float max_x //relative to the middle of the screen
+		,float max_y //relative to the middle of the screen
+		,ALLEGRO_TRANSFORM* transform//returns the transformation it used
+		,TRACK_DATA* track){
+	float scale=(max_x-min_x)/(track->max_min[track_max_x]-track->max_min[track_min_x]);
+	if((max_y-min_y)/(track->max_min[track_min_y] - track->max_min[track_max_y])<scale)
+		scale=(max_y-min_y)/(track->max_min[track_min_y] - track->max_min[track_max_y]);
+
+
+	float midx = (min_x+max_x)/2;
+	float midy = (min_y+max_y)/2;
+	_Bool transform_is_null = false;
+	if(!transform){
+		transform_is_null=true;
+		transform=malloc(sizeof(ALLEGRO_TRANSFORM));
+	}
+	al_identity_transform(transform);
+	al_translate_transform(transform, 
+			-(track->max_min[track_min_x] + track->max_min[track_max_x])/2, 
+			-(track->max_min[track_min_y] + track->max_min[track_max_y])/2);
+	al_scale_transform(transform, scale,scale);
+	al_translate_transform(transform, midx,midy);
+	al_use_transform(transform);
+	drawtrack(track,scale);
+	ALLEGRO_TRANSFORM identity;
+	al_identity_transform(&identity);
+	al_use_transform(&identity);
+	if(transform_is_null)free(transform);
+	
+}
 // vim: cc=100

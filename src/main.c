@@ -32,12 +32,13 @@ e-mail:thomas.v.maaren@outlook.com
 #include "config.h"
 #include "misc.h"
 #include "file_paths.h"
-#include "race.h"
-#include "record.h"
 #include "ghost.h"
 #include "gui.h"
+#include "drawtrack.h"
+#include "record.h"
+#include "race.h"
 
-#define version "0.2.2"
+#define version "0.2.3"
 
 #define thickness 2
 
@@ -48,9 +49,9 @@ typedef struct{
 	float y2frac;
 }box_relative;
 
-void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event, 
+void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event, 
 		ALLEGRO_EVENT_QUEUE *queue, char* dir_path, PATHS* paths,
-		void (*click_func)(ALLEGRO_FS_ENTRY *track_file_entry,char* filename,
+		void (*click_func)(TRACK_DATA *track,char* filename,
 			CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths));
 
 void main(){
@@ -190,27 +191,27 @@ void main(){
 			if(mouse_down && !prev_mouse_down)
 				click =true;
 
-			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.1,0.1,0.5,0.9,
-						screen_width,screen_height,&config,"Race!")&&click){
-				dir_menu(&config, disp, &event, queue, data_dir sep_str "tracks",
+
+			draw_text(config.font_name, "Zobrollo", al_map_rgb(255,255,255), 
+					0.5*screen_width, 0.2*screen_height, 0.8*screen_width, 
+					0.3*screen_height);
+			draw_text(config.font_name, "v"version, al_map_rgb(255,255,255), 
+					0.5*screen_width, 0.34*screen_height, 0.15*screen_width, 
+					0.1*screen_height);
+			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.3,0.42,0.7,0.70,
+						screen_width,screen_height,&config,"Time Trial")&&click){
+				track_menu(&config, disp, &event, queue, data_dir sep_str "tracks",
 						&paths,race);
 			}
-	/*click_box start_box = {0.1,0.1,0.5,0.9,config.button_border_thickness, config.button_border_color,
-		config.button_select_color, config.button_text_color, "Race!", config.font_name};
-	click_box record_box = {0.5,0.1,0.9,0.5,config.button_border_thickness, config.button_border_color,
-		config.button_select_color, config.button_text_color, "Records", config.font_name};
-	click_box quit_box = {0.5,0.5,0.9,0.9,config.button_border_thickness, config.button_border_color,
-		config.button_select_color, config.button_text_color, "Quit", config.font_name};*/
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.5,0.1,0.9,0.5,
+			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.3,0.72,0.49,0.85,
 						screen_width, screen_height, &config, "Records")&&
 					click){
 				
-				dir_menu(&config, disp, &event, queue, paths.record,&paths, 
+				track_menu(&config, disp, &event, queue, data_dir sep_str "tracks",&paths, 
 						show_record);
 
 			}
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.5,0.5,0.9,0.9,
+			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.51,0.72,0.7,0.85,
 						screen_width, screen_height, &config, "Quit")&&
 					click){
 				exit(1);
@@ -226,9 +227,9 @@ void main(){
 
 
 //Every filein the specified directory is an item in this menu
-void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event, 
+void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event, 
 		ALLEGRO_EVENT_QUEUE *queue, char* dir_path, PATHS* paths,
-		void (*click_func)(ALLEGRO_FS_ENTRY *track_file_entry,char* filename,
+		void (*click_func)(TRACK_DATA *track,char* filename,
 			CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths)){
 
 	/*true: In the previuous frame the mouse was down
@@ -265,13 +266,17 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 
 	}
 	box_relative file_box[am_files];
+	TRACK_DATA tracks[am_files];
 	int i=0;
 	while(i<am_files){
+		ALLEGRO_FILE* track_file = al_open_fs_entry(files[i],"r");
+		loadtrack(track_file, tracks+i);
+		al_fclose(track_file);
 		float y_centre = 1/(float)(am_files+1)*(i+1);
 		file_box[i].x1frac = 0.25;
 		file_box[i].x2frac = 0.75;
-		file_box[i].y1frac = (float)y_centre-1/(float)(am_files+1)/2;
-		file_box[i].y2frac = (float)y_centre+1/(float)(am_files+1)/2;
+		file_box[i].y1frac = (float)y_centre-0.9/(float)(am_files+1)/2;
+		file_box[i].y2frac = (float)y_centre+0.9/(float)(am_files+1)/2;
 		
 		i++;
 	}
@@ -337,14 +342,45 @@ void dir_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
 			i=0;
 			while(i<am_files){
+
 				_Bool mouse_in_box = handle_click_box_relative(mouse_state.x,
 						mouse_state.y, file_box[i].x1frac,
 						file_box[i].y1frac,file_box[i].x2frac,
 						file_box[i].y2frac, screen_width, 
-						screen_height, config, file_names[i]);
+						screen_height, config, " "/*file_names[i]*/);
+
+				//draw contents of the box
+				float box_width =file_box[i].x2frac-file_box[i].x1frac;
+				float box_height =file_box[i].y2frac-file_box[i].y1frac;
+				float track_x1=(box_width*0.1+file_box[i].x1frac)*screen_width;
+				float track_y1=(box_height*0.1+file_box[i].y1frac)*screen_height;
+				float track_x2=(box_width*0.9+file_box[i].x1frac)*screen_width;
+				float track_y2=(box_height*0.6+file_box[i].y1frac)*screen_height;
+				al_draw_rectangle(track_x1,track_y1,track_x2,track_y2,
+						config->button_border_color, 
+						config->button_border_thickness);
+				al_draw_filled_rectangle(
+						track_x1+config->button_border_thickness/2,
+						track_y1+config->button_border_thickness/2,
+						track_x2-config->button_border_thickness/2,
+						track_y2-config->button_border_thickness/2,
+						al_map_rgb(0,0,0));
+						
+				drawmap(track_x1,track_y1,track_x2,track_y2,
+						NULL, tracks+i);
+				draw_text(config->font_name, file_names[i], 
+						config->button_text_color,
+						(box_width*0.5+file_box[i].x1frac)*screen_width,
+						(box_height*0.8+file_box[i].y1frac)*screen_height,
+						box_width*0.8*screen_width,
+						box_height*0.2*screen_height);
+						
+						
+
+
 				if(mouse_in_box && click){
 
-					click_func(files[i], file_names[i], config, disp, paths);
+					click_func(tracks+i, file_names[i], config, disp, paths);
 					back_from_race=true;
 					al_flush_event_queue(queue);
 					break;

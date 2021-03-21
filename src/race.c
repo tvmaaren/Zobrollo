@@ -51,7 +51,7 @@ int GetCurSegment(float x, float y, float* track_angle, int cur_segment, TRACK_D
 float InInterval(float a);//Have angle between -pi and pi
 void SaveRace(float *buf, int am_frames, FILE *save_file, float fps);//Saves the race in a file
 
-void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config, 
+void race(TRACK_DATA *track, char* filename, CONFIG* config, 
 		ALLEGRO_DISPLAY* disp, PATHS *paths){
 
 	
@@ -88,18 +88,6 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 	unsigned char key[ALLEGRO_KEY_MAX];
 	memset(key, 0, sizeof(key));
 	
-	TRACK_DATA track;
-	
-	ALLEGRO_FILE* track_file = al_open_fs_entry(track_file_entry, "r");
-	if(!track_file){
-		fprintf(stderr, "Could not open track file\n");
-		return;
-	}
-
-
-	loadtrack(track_file, &track);
-	al_fclose(track_file);
-
 	int frame = 0;
 	int ghost_buf_len = 10;
 	float* ghost_buf = malloc(sizeof(float)*ghost_buf_len);
@@ -267,11 +255,11 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				float new_y_pos=karts[0].y+sin(karts[0].angle)*v/config->fps;
 
 				int new_cur_segment=get_cur_segment(new_x_pos, new_y_pos,
-						&track_angle, cur_segment, &track);
+						&track_angle, cur_segment, track);
 				if(new_cur_segment!=-1){
 					
-					if(mode==PLAYING&&max_segment==track.n_segments-1 && 
-							cur_segment==track.n_segments-1 && 
+					if(mode==PLAYING&&max_segment==track->n_segments-1 && 
+							cur_segment==track->n_segments-1 && 
 							new_cur_segment==0){
 						lap++;
 						if(lap>config->laps){
@@ -430,7 +418,7 @@ void race(ALLEGRO_FS_ENTRY *track_file_entry, char* filename, CONFIG* config,
 				karts[1].y=record_ghost_buf[frame*3+2];
 				n_karts=2;
 			}
-			drawframe(n_karts, karts, scale,screen_width,screen_height,&track, track_angle, 
+			drawframe(n_karts, karts, scale,screen_width,screen_height,track, track_angle, 
 					config);
 			//Draw hearts
 			if(config->show_hearts){

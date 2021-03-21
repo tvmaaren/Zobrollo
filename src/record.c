@@ -5,10 +5,11 @@
 
 #include "file_paths.h"
 #include "config.h"
-#include "record.h"
 #include "misc.h"
 #include "gui.h"
 #include "ghost.h"
+#include "drawtrack.h"
+#include "record.h"
 
 char * TimeToString(double  secs){
 	int milsecs  = (int)(secs*1000);
@@ -52,7 +53,7 @@ int load_record(ALLEGRO_FILE* file, record** records,
 }
 
 
-void show_record(ALLEGRO_FS_ENTRY *record_file_entry, char* filename, CONFIG* config,
+void show_record(TRACK_DATA* track, char* filename, CONFIG* config,
 		ALLEGRO_DISPLAY* disp, PATHS* paths){
 	
 	ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
@@ -68,7 +69,9 @@ void show_record(ALLEGRO_FS_ENTRY *record_file_entry, char* filename, CONFIG* co
 	 *false:The mouse is up*/
 	_Bool prev_mouse_down = true;
 
-	ALLEGRO_FILE* file = al_open_fs_entry(record_file_entry, "r");
+	al_change_directory(paths->record);
+	ALLEGRO_FILE* file = al_fopen(filename, "r");
+	al_change_directory(paths->data);
 	record* records;
 	int am_records = load_record(file, &records, true);
 
