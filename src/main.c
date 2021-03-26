@@ -297,7 +297,6 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 	_Bool back_from_race = false;
 
 	while(true){
-		printf("loop\n");
 		al_acknowledge_resize(disp);
 		_Bool click = false;
 		_Bool EndProgram=false;
@@ -324,7 +323,6 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 		}
 		_Bool resized=true;
 		if(event->type == ALLEGRO_EVENT_DISPLAY_RESIZE || first){
-			printf("resize\n");
 			font =  al_create_builtin_font();
 			must_init(font, "builtin font");
 
@@ -341,11 +339,9 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 		}
 		_Bool mouse_down;
 		if(first|al_is_event_queue_empty(queue)){
-			printf("begin redraw\n");
 			al_clear_to_color(al_map_rgb(0,0,0));
 			ALLEGRO_MOUSE_STATE mouse_state;
 			al_get_mouse_state(&mouse_state);
-			printf("x:%d\ty:%d\n",mouse_state.x,mouse_state.y);
 			mouse_down = (_Bool)(mouse_state.buttons&0x1);
 			if(mouse_down && !prev_mouse_down){
 				click =true;
@@ -380,12 +376,12 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 						
 				drawmap(track_x1,track_y1,track_x2,track_y2,
 						NULL, tracks+i);
-				/*draw_text(config->font_name, file_names[i], 
+				draw_text(config->font_name, file_names[i], 
 						config->button_text_color,
 						(box_width*0.5+file_box[i].x1frac)*screen_width,
 						(box_height*0.8+file_box[i].y1frac)*screen_height,
 						box_width*0.8*screen_width,
-						box_height*0.2*screen_height);*/
+						box_height*0.2*screen_height);
 						
 						
 
@@ -400,7 +396,6 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 				i++;
 			}
 			al_flip_display();
-			printf("end redraw\n");
 		}
 		first=back_from_race;
 		back_from_race=false;

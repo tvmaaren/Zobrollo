@@ -79,8 +79,8 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
     	al_register_event_source(queue, al_get_display_event_source(disp));
     	al_register_event_source(queue, al_get_timer_event_source(timer));
 
-	ALLEGRO_BITMAP* full_heart = al_load_bitmap("full heart.png");
-	ALLEGRO_BITMAP* half_heart = al_load_bitmap("half heart.png");
+	ALLEGRO_BITMAP* full_heart = al_load_bitmap(data_dir sep_str"full heart.png");
+	ALLEGRO_BITMAP* half_heart = al_load_bitmap(data_dir sep_str"half heart.png");
 
 	#define KEY_SEEN     1
 	#define KEY_RELEASED 2
@@ -104,18 +104,21 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 
 	
 	ALLEGRO_FILE* record_file =al_fopen(filename,"r+");
-	if(!record_file){
+	/*if(!record_file){
 	    //file does not exist yet
 	    record_file = al_fopen(filename , "w+");
 	    if(!record_file){
 		    fprintf(stderr, "Error: Could not create \"%s\"\n", filename);
 	    }
-	}
+	}*/
 
 	al_change_directory(paths->data);
 
 	record *records;
-	int am_records = load_record(record_file, &records, true);
+	int am_records;
+	if(record_file)
+		am_records = load_record(record_file, &records, true);
+	al_fclose(record_file);
 
 	//load ghost of the record
 	int frames_record;
@@ -206,8 +209,8 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 				screen_width  = al_get_display_width(disp);
 				font = al_create_builtin_font();
 
-				full_heart = al_load_bitmap("full heart.png");
-				half_heart = al_load_bitmap("half heart.png");
+				full_heart = al_load_bitmap(data_dir sep_str"full heart.png");
+				half_heart = al_load_bitmap(data_dir sep_str"half heart.png");
 
 				redraw=true;
 				break;
@@ -280,11 +283,15 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 									local_time->tm_hour,
 									local_time->tm_min,
 									local_time->tm_sec);;
+							al_change_directory(paths->record);
+							record_file = al_fopen(filename, "a");
 							al_fputs(record_file,date_string);
 							char record_file_text[20];
 
 							sprintf(record_file_text,"%f\n",stopwatch);
 							al_fputs(record_file, record_file_text);
+							al_fclose(record_file);
+							al_fclose(record_file);
 
 							//Store the ghost in a bin file at
 							//local_dir/ghosts/%trackname%/%time%.bin
@@ -335,8 +342,8 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 									printf("Could not make"
 										" ghost file\n");
 								}
-								al_change_directory(paths->data);
 							}
+							al_change_directory(paths->data);
 							int frame_i = 0;
 							
 							
@@ -539,7 +546,6 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 	al_destroy_font(splash);
 	al_destroy_font(font);
 
-	al_fclose(record_file);
 
 	free(records);
 	if(found_ghost_file){

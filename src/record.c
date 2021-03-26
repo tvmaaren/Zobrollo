@@ -71,23 +71,28 @@ void show_record(TRACK_DATA* track, char* filename, CONFIG* config,
 
 	al_change_directory(paths->record);
 	ALLEGRO_FILE* file = al_fopen(filename, "r");
+	if(!file){
+		fprintf(stderr, "Could not open record file for track %s\n", filename);
+	}
 	al_change_directory(paths->data);
 	record* records;
-	int am_records = load_record(file, &records, true);
-
-	_Bool has_replay_file[am_records];
-	int i =0;
+	int am_records;
+	_Bool *has_replay_file;
 	char ghost_filename[25];
-	while(i<am_records){
-		al_change_directory(paths->ghost);
-		al_change_directory(filename);
-		strcpy(ghost_filename, records[i].date);
-		strcat(ghost_filename, ".bin");
-		has_replay_file[i] = al_filename_exists(ghost_filename);
-		i++;
-	}
+	if(file){
+		am_records = load_record(file, &records, true);
+		has_replay_file = malloc(sizeof(_Bool)*am_records);
 
-	int loopcount = 0;
+		int i =0;
+		while(i<am_records){
+			al_change_directory(paths->ghost);
+			al_change_directory(filename);
+			strcpy(ghost_filename, records[i].date);
+			strcat(ghost_filename, ".bin");
+			has_replay_file[i] = al_filename_exists(ghost_filename);
+			i++;
+		}
+	}
 
 	while(true){
 		al_acknowledge_resize(disp);
@@ -120,40 +125,44 @@ void show_record(TRACK_DATA* track, char* filename, CONFIG* config,
 				exit(1);
 		}
 		al_clear_to_color(al_map_rgb(0,0,0));
-		i =0;
+		int i =0;
 		ALLEGRO_FONT* font = al_create_builtin_font();
 		_Bool back_from_race=false;
-		while(i<am_records){
-			al_draw_textf(font, al_map_rgb(255,255,255),0,(i)*30+10, 
-					0,"%s  %s", records[i].date,TimeToString(records[i].time));
+		if(file){
+			while(i<am_records){
+				al_draw_textf(font, al_map_rgb(255,255,255),0,(i)*30+10, 
+						0,"%s  %s", records[i].date,TimeToString(records[i].time));
 
-			if(has_replay_file[i]){
-				al_change_directory(paths->data);
-				if(handle_click_box(mouse_state.x, mouse_state.y, 250, i*30, 
-						350, (i+1)*30, config, "Replay")&&click){
-
-					al_change_directory(paths->ghost);
-					al_change_directory(filename);
-					strcpy(ghost_filename, records[i].date);
-					strcat(ghost_filename, ".bin");
-					ALLEGRO_FS_ENTRY * ghost_entry = 
-						al_create_fs_entry(ghost_filename);
+				if(has_replay_file[i]){
 					al_change_directory(paths->data);
-					al_change_directory("tracks");
-					ALLEGRO_FS_ENTRY * track_entry =
-						al_create_fs_entry(filename);
-					al_change_directory("..");
-					play_ghost(ghost_entry, track_entry,
-							config, disp);
-					al_flush_event_queue(queue);
-					back_from_race=true;
+					if(handle_click_box(mouse_state.x, mouse_state.y, 250, i*30, 
+							350, (i+1)*30, config, "Replay")&&click){
+
+						al_change_directory(paths->ghost);
+						al_change_directory(filename);
+						strcpy(ghost_filename, records[i].date);
+						strcat(ghost_filename, ".bin");
+						ALLEGRO_FS_ENTRY * ghost_entry = 
+							al_create_fs_entry(ghost_filename);
+						al_change_directory(paths->data);
+						al_change_directory("tracks");
+						ALLEGRO_FS_ENTRY * track_entry =
+							al_create_fs_entry(filename);
+						al_change_directory("..");
+						play_ghost(ghost_entry, track_entry,
+								config, disp);
+						al_flush_event_queue(queue);
+						back_from_race=true;
+					}
 				}
+				i++;
 			}
-			i++;
+		}else{
+			al_draw_text(font, al_map_rgb(255,255,255), 0,0,0,"Sorry, you don't have"
+					" any records for this track");
 		}
 		prev_mouse_down = mouse_down;
 		al_flip_display();
-		loopcount++;
 		al_destroy_font(font);
 		if(!back_from_race)
 			al_wait_for_event(queue,&event);
