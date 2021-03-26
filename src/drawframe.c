@@ -9,32 +9,16 @@
 
 #include <math.h>
 
-void drawmap(int am_karts,kart_t *karts//0th element is seen as main kart
+void drawmap_with_karts(int am_karts,kart_t *karts//0th element is seen as main kart
 		,float min_x //relative to the middle of the screen
 		,float min_y //relative to the middle of the screen
 		,float max_x //relative to the middle of the screen
 		,float max_y //relative to the middle of the screen
 		,TRACK_DATA* track, CONFIG* config){
-	float scale=(max_x-min_x)/(track->max_min[track_max_x]-track->max_min[track_min_x]);
-	if((max_y-min_y)/(track->max_min[track_min_y] - track->max_min[track_max_y])<scale)
-		scale=(max_y-min_y)/(track->max_min[track_min_y] - track->max_min[track_max_y]);
-
-
-	float midx = (min_x+max_x)/2;
-	float midy = (min_y+max_y)/2;
 	ALLEGRO_TRANSFORM transform;
-	al_identity_transform(&transform);
-	al_translate_transform(&transform, 
-			-(track->max_min[track_min_x] + track->max_min[track_max_x])/2, 
-			-(track->max_min[track_min_y] + track->max_min[track_max_y])/2);
-	al_scale_transform(&transform, scale,scale);
-	al_translate_transform(&transform, midx,midy);
-	al_use_transform(&transform);
-	drawtrack(track,scale);
+	drawmap(min_x, min_y, max_x, max_y, &transform, track);
 	
 	//draw the dot that represents the player
-	ALLEGRO_TRANSFORM identity;
-	al_identity_transform(&identity);
 
 	int i =0;
 	while(i<am_karts){
@@ -43,13 +27,11 @@ void drawmap(int am_karts,kart_t *karts//0th element is seen as main kart
 		float doty=karts[i].y;
 		al_transform_coordinates(&transform, &dotx, &doty);
 		
-		al_use_transform(&identity);
-
 		al_draw_filled_circle(dotx, doty, 3, karts[i].color);
 		i++;
 	}
 }
-
+	
 
 void drawframe(int am_karts,kart_t *karts//0th element is seen as main kart
 		, float scale, int screen_width, int screen_height, TRACK_DATA* track,
@@ -88,7 +70,7 @@ void drawframe(int am_karts,kart_t *karts//0th element is seen as main kart
 	al_use_transform(&transform);
 	//display the map
 	if(config->show_map)
-		drawmap(am_karts, karts, 3*screen_width/4, screen_height/2, screen_width, 
+		drawmap_with_karts(am_karts, karts, 3*screen_width/4, screen_height/2, screen_width, 
 				screen_height,  track,config);
 		
 }

@@ -43,8 +43,8 @@ void draw_text(const char* name, char* text, ALLEGRO_COLOR color, float x,
 		float y, int max_width, int max_height){
 	int text_len = strlen(text);
 	float width_height;
-	if(max_width>max_height)
-		width_height = max_width/strlen(text);
+	if(max_width/strlen(text)>max_height)
+		width_height = max_height;
 	else
 		width_height = max_width/strlen(text);
 		//only reload if the size of the window has changed
