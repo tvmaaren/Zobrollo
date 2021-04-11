@@ -44,6 +44,8 @@ e-mail:thomas.v.maaren@outlook.com
 	#define local_dir "/.zobrollo"
 #endif
 
+#define version "0.3.0"
+
 //Paths that the program needs. "config path" is not included, because (at the moment) the program
 //only needs to read from it once.
 typedef struct{

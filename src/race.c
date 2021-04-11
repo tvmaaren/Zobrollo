@@ -51,8 +51,10 @@ int GetCurSegment(float x, float y, float* track_angle, int cur_segment, TRACK_D
 float InInterval(float a);//Have angle between -pi and pi
 void SaveRace(float *buf, int am_frames, FILE *save_file, float fps);//Saves the race in a file
 
-void race(TRACK_DATA *track, char* filename, CONFIG* config, 
-		ALLEGRO_DISPLAY* disp, PATHS *paths){
+void race(CONNECTION connection,int my_socket,int max_sd, int*sockets_list, int max_sockets,
+		uint16_t player_number, TRACK_DATA *track, char* filename, CONFIG* config, 
+		ALLEGRO_DISPLAY* disp, PATHS *paths, ALLEGRO_EVENT* event, 
+		ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
 
 	
 	//timers
@@ -61,22 +63,15 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 	ALLEGRO_TIMER* countdown = al_create_timer(1);
 	must_init(countdown,"countdown");
 
+
 	
-	ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
-	must_init(queue,"queue");
-
-	ALLEGRO_FONT* font = al_create_builtin_font();
-
 	must_init(font,"couldn't initialize font\n");
 
 	ALLEGRO_FONT* splash = al_load_ttf_font(config->font_name, 20, ALLEGRO_TTF_MONOCHROME);
 
-	ALLEGRO_EVENT event;
 	al_start_timer(timer);
 	al_start_timer(countdown);
 
-	al_register_event_source(queue, al_get_keyboard_event_source());
-    	al_register_event_source(queue, al_get_display_event_source(disp));
     	al_register_event_source(queue, al_get_timer_event_source(timer));
 
 	ALLEGRO_BITMAP* full_heart = al_load_bitmap(data_dir sep_str"full heart.png");
@@ -89,89 +84,30 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 	memset(key, 0, sizeof(key));
 	
 	int frame = 0;
+
+	//these variables are only used when connection is set to NONE
 	int ghost_buf_len = 10;
 	float* ghost_buf = malloc(sizeof(float)*ghost_buf_len);
-
-
-	if(!al_make_directory(paths->record)){
-		fprintf(stderr, "Error: Could not create \"%s\"\n",paths->record);
-		exit(1);
-	}
-	if(!al_change_directory(paths->record)){
-		fprintf(stderr, "Error: Could not open \"%s\"\n",paths->record);
-		exit(1);
-	}
-
-	
-	ALLEGRO_FILE* record_file =al_fopen(filename,"r+");
-	/*if(!record_file){
-	    //file does not exist yet
-	    record_file = al_fopen(filename , "w+");
-	    if(!record_file){
-		    fprintf(stderr, "Error: Could not create \"%s\"\n", filename);
-	    }
-	}*/
-
-	al_change_directory(paths->data);
-
-	record *records;
 	int am_records;
-	if(record_file)
-		am_records = load_record(record_file, &records, true);
-	al_fclose(record_file);
-
-	//load ghost of the record
+	record *records;
 	int frames_record;
 	float fps_record;
 	float* record_ghost_buf;
 	ALLEGRO_FILE* ghost_record_file;
+	_Bool found_ghost_file;
+	ALLEGRO_FILE* record_file;
 
-	int n_karts = 1;
-	_Bool found_ghost_file=false;
-	if(config->play_against_ghost){
-		al_change_directory(paths->ghost);
-		al_change_directory(filename);
-		int i =0;
-		while(i<am_records){
-			char ghost_record_filename[strlen(records[i].date)+sizeof(".bin")];
-			strcpy(ghost_record_filename, records[i].date);
-			strcat(ghost_record_filename, ".bin");
-			
-			ghost_record_file = al_fopen(ghost_record_filename, "rb");
-			if(ghost_record_file){
-				found_ghost_file = true;
-				break;
-			}
-			i++;
-		}
-		if(found_ghost_file){
-			al_fread(ghost_record_file, &frames_record, sizeof(frames_record));
-			al_fread(ghost_record_file, &fps_record, sizeof(fps_record));
-			record_ghost_buf = malloc(sizeof(float)*frames_record*3);
-			al_fread(ghost_record_file, record_ghost_buf, 3*sizeof(float)*frames_record);
-			al_fclose(ghost_record_file);
-			n_karts =2;
-		}
-		al_change_directory(paths->data);
-	}
-	kart_t karts[n_karts];
 
 	float v=0;
-	karts[0].angle=M_PI/2;
 	float min_radius = sqrt(config->kart_height*config->kart_height/4+
 		pow(config->kart_height/tan(config->max_wheel_angle)+config->kart_width/2,2));
 	float scale=1;
 	float track_angle;
 	float damage=0;
+	kart_t *karts;
+	int n_karts;
+	
 
-	//the position of the middle of the kart
-	karts[0].x=0;
-	karts[0].y=0;
-
-	karts[0].color = config->kart_color;
-	karts[1].color = config->kart_color;
-	karts[1].color = al_map_rgb(config->kart_color_r/2,config->kart_color_g/2,
-			config->kart_color_b/2);
 
 	//keeps track in wich segment the kart is in.
 	//negative means outside the track
@@ -187,8 +123,85 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 
 	double start_time;
 
+	switch(connection){
+		case(SERVER):
+			break;
+		case(CONNECT_TO_SERVER):
+			break;
+		case(NONE):
+
+			n_karts = 1;
+			if(!al_make_directory(paths->record)){
+				fprintf(stderr, "Error: Could not create \"%s\"\n",
+						paths->record);
+				exit(1);
+			}
+			if(!al_change_directory(paths->record)){
+				fprintf(stderr, "Error: Could not open \"%s\"\n",
+						paths->record);
+				exit(1);
+			}
+
+			
+			record_file =al_fopen(filename,"r+");
+			if(!record_file){
+			    //file does not exist yet
+			    record_file = al_fopen(filename , "w+");
+			    if(!record_file){
+				    fprintf(stderr, "Error: Could not create \"%s\"\n", 
+						    filename);
+			    }
+			}
+			if(record_file)
+				am_records = load_record(record_file, &records, true);
+			al_fclose(record_file);
+
+			if(config->play_against_ghost){
+				found_ghost_file=false;
+				al_change_directory(paths->ghost);
+				al_change_directory(filename);
+				int i =0;
+				while(i<am_records){
+					char ghost_record_filename[strlen(records[i].date)+
+						sizeof(".bin")];
+					strcpy(ghost_record_filename, records[i].date);
+					strcat(ghost_record_filename, ".bin");
+					
+					ghost_record_file = al_fopen(ghost_record_filename, "rb");
+					if(ghost_record_file){
+						found_ghost_file = true;
+						break;
+					}
+					i++;
+				}
+				if(found_ghost_file){
+					al_fread(ghost_record_file, &frames_record, 
+							sizeof(frames_record));
+					al_fread(ghost_record_file, &fps_record, 
+							sizeof(fps_record));
+					record_ghost_buf = malloc(sizeof(float)*frames_record*3);
+					al_fread(ghost_record_file, record_ghost_buf, 
+							3*sizeof(float)*frames_record);
+					al_fclose(ghost_record_file);
+					n_karts =2;
+				}
+				al_change_directory(paths->data);
+			}
+			karts=malloc(sizeof(kart_t)*n_karts);
+			karts[1].color = config->kart_color;
+			printf("%d karts\n", n_karts);
+			break;
+	}
+	printf("%d karts\n", n_karts);
+	karts[0].angle=M_PI/2;
+	//the position of the middle of the kart
+	karts[0].x=0;
+	karts[0].y=0;
+
+	karts[0].color = config->kart_color;
+
 	while(true){
-		al_wait_for_event(queue,&event);
+		al_wait_for_event(queue,event);
 
 		_Bool EndProgram=false;
 		_Bool redraw=false;
@@ -202,7 +215,7 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 				start_time = al_get_time();
 			}
 		}
-		switch(event.type){
+		switch(event->type){
 			case(ALLEGRO_EVENT_DISPLAY_RESIZE): 
 				al_acknowledge_resize(disp);
 				screen_height = al_get_display_height(disp);
@@ -291,7 +304,6 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 							sprintf(record_file_text,"%f\n",stopwatch);
 							al_fputs(record_file, record_file_text);
 							al_fclose(record_file);
-							al_fclose(record_file);
 
 							//Store the ghost in a bin file at
 							//local_dir/ghosts/%trackname%/%time%.bin
@@ -379,7 +391,7 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 				redraw=true;
 				break;
 			case(ALLEGRO_EVENT_KEY_DOWN):
-				key[event.keyboard.keycode] = KEY_SEEN | KEY_RELEASED;
+				key[event->keyboard.keycode] = KEY_SEEN | KEY_RELEASED;
 				if(key[ALLEGRO_KEY_F11]){
 					//Toggle full screen
 					al_set_display_flag(disp, ALLEGRO_FULLSCREEN_WINDOW, 
@@ -399,7 +411,7 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 						
 				break;
 		    	case ALLEGRO_EVENT_KEY_UP:
-				key[event.keyboard.keycode] &= KEY_RELEASED;
+				key[event->keyboard.keycode] &= KEY_RELEASED;
 				break;
 			case(ALLEGRO_EVENT_DISPLAY_CLOSE):
 				exit(1);
@@ -423,7 +435,6 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 				karts[1].angle = record_ghost_buf[frame*3];
 				karts[1].x=record_ghost_buf[frame*3+1];
 				karts[1].y=record_ghost_buf[frame*3+2];
-				n_karts=2;
 			}
 			drawframe(n_karts, karts, scale,screen_width,screen_height,track, track_angle, 
 					config);
@@ -535,23 +546,46 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 
 		}
 	}
+    	al_unregister_event_source(queue, al_get_timer_event_source(timer));
+
 	al_destroy_bitmap(half_heart);
 	al_destroy_bitmap(full_heart);
 
-	al_destroy_event_queue(queue);
 	
 	al_destroy_timer(countdown);
 	al_destroy_timer(timer);
 
 	al_destroy_font(splash);
-	al_destroy_font(font);
 
+	free(karts);
 
 	free(records);
 	if(found_ghost_file){
 		free(record_ghost_buf);
 	}
 	
+}
+
+void singleplayer_race(TRACK_DATA *track, char* filename, CONFIG* config, ALLEGRO_DISPLAY* disp, 
+		PATHS *paths, ALLEGRO_EVENT* event, ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
+	race(NONE,
+		/*These values don't matter*/0,0,NULL,0,0,
+		track, filename, config, disp, paths, event, queue, font);
+}
+
+void server_race(int server_socket, int max_sd, int*sockets_list, int max_sockets, 
+		TRACK_DATA *track, char* filename, CONFIG* config, ALLEGRO_DISPLAY* disp, 
+		PATHS *paths,ALLEGRO_EVENT* event, ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
+	race(SERVER, server_socket, max_sd, sockets_list, max_sockets, 0, track, filename, config, 
+			disp, paths, event, queue, font);
+}
+
+void connect_server_race(int client_socket, uint16_t player_number, TRACK_DATA *track, 
+		char* filename, CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS *paths, 
+		ALLEGRO_EVENT* event, ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
+	race(CONNECT_TO_SERVER, client_socket,
+			/*these values don't matter*/0,NULL,0,
+			player_number,track, filename, config, disp, paths, event, queue, font);
 }
 
 

@@ -53,18 +53,9 @@ int load_record(ALLEGRO_FILE* file, record** records,
 }
 
 
-void show_record(TRACK_DATA* track, char* filename, CONFIG* config,
-		ALLEGRO_DISPLAY* disp, PATHS* paths){
+void show_record(TRACK_DATA* track, char* filename, CONFIG* config, ALLEGRO_DISPLAY* disp, 
+		PATHS* paths, ALLEGRO_EVENT *event, ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
 	
-	ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
-	must_init(queue,"queue");
-	ALLEGRO_EVENT event;
-	must_init(al_install_mouse(), "mouse");
-	must_init(al_install_keyboard(), "mouse");
-    	al_register_event_source(queue, al_get_mouse_event_source());
-    	al_register_event_source(queue, al_get_display_event_source(disp));
-	al_register_event_source(queue, al_get_keyboard_event_source());
-
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/
 	_Bool prev_mouse_down = true;
@@ -106,10 +97,10 @@ void show_record(TRACK_DATA* track, char* filename, CONFIG* config,
 		if(mouse_down && !prev_mouse_down){
 			click =true;
 		}
-		switch(event.type){
+		switch(event->type){
 
 			case(ALLEGRO_EVENT_KEY_DOWN):
-				switch(event.keyboard.keycode){
+				switch(event->keyboard.keycode){
 					case(ALLEGRO_KEY_F11):
 						al_set_display_flag(disp, ALLEGRO_FULLSCREEN_WINDOW, 
 							!(_Bool)(al_get_display_flags(disp) & 
@@ -165,7 +156,7 @@ void show_record(TRACK_DATA* track, char* filename, CONFIG* config,
 		al_flip_display();
 		al_destroy_font(font);
 		if(!back_from_race)
-			al_wait_for_event(queue,&event);
+			al_wait_for_event(queue,event);
 	}
 }
 

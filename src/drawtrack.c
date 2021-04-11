@@ -661,4 +661,5 @@ void drawmap(float min_x //relative to the middle of the screen
 	if(transform_is_null)free(transform);
 	
 }
+
 // vim: cc=100

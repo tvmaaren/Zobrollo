@@ -54,4 +54,5 @@ void draw_text(const char* name, char* text, ALLEGRO_COLOR color, float x,
 	al_draw_text(font, color, x, y-width_height/2, ALLEGRO_ALIGN_CENTRE, text);
 	al_destroy_font(font);
 }
+
 // vim: cc=100

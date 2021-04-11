@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+#define _Bool bool
+#endif
 
 typedef struct{
 	
