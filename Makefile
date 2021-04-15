@@ -3,7 +3,7 @@ DATADIR ?= ${PREFIX}/share/zobrollo
 LICENSEDIR ?= /usr/share/licenses
 BINDIR ?= ${PREFIX}/bin
 
-OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/input_boxes.o src/kart.o src/main.o src/misc.o src/race.o src/record.o  src/connect_server.o
+OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/input_boxes.o src/kart.o src/main.o src/misc.o src/race.o src/record.o  src/connect_server.o src/networking.o
 libs=-lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image /home/thomas/tech/Agui/libagui.a /home/thomas/tech/Agui/libagui_allegro5.a
 
 CFLAGS= -g
@@ -30,6 +30,7 @@ src/kart.o: src/kart.c
 src/misc.o: src/misc.c
 src/display: src/display.c
 src/file_paths.h:
+src/networking.o: src/networking.c
 
 
 clean:

@@ -54,7 +54,13 @@ void add_element(void** list, int *required, int *available, size_t element_size
 int GetSimpleSegments(void*** segments, _Bool** segment_types, float* trackwidth, 
 		ALLEGRO_FILE *file);
 void drawtrack(TRACK_DATA *track_data, float scale);
+#ifdef __cplusplus
+extern "C"{
+#endif
 void loadtrack(ALLEGRO_FILE* file, TRACK_DATA* track_data);
+#ifdef __cplusplus
+}
+#endif
 void cart2pol(float x, float y, float *angle, float *dist);
 int get_cur_segment(float x, float y, float* track_angle, int cur_segment, TRACK_DATA *track_data);
 void drawmap(float min_x //relative to the middle of the screen

@@ -76,4 +76,20 @@ int dec_circ_count(int i, int max){
 	return i;
 }
 
+//Deletes the node that comes after the specified node from the linked list
+void del_node(node_t* node){
+	node_t* next=node->next->next;
+	free(node->next);
+	node->next = next;
+}
+
+
+//Adds a node after the specified node in the linked list and returns a pointer to that new node
+node_t* add_node(node_t* node){
+	node_t* next = node->next;
+	node->next = malloc(sizeof(node_t));
+	node->next->next = next;
+	return (node->next);
+}
+
 // vim: cc=100

@@ -36,10 +36,11 @@ e-mail:thomas.v.maaren@outlook.com
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "networking.h"
 #include "config.h"
-#include "input_boxes.h"
 #include "misc.h"
 #include "file_paths.h"
+#include "input_boxes.h"
 #include "ghost.h"
 #include "gui.h"
 #include "drawtrack.h"
@@ -54,21 +55,6 @@ typedef struct{
 	float y2frac;
 }box_relative;
 
-//got this code from https://stackoverflow.com/questions/1543466/how-do-i-change-a-tcp-socket-to-be-non-blocking
-_Bool SetSocketBlockingEnabled(int fd, _Bool blocking)
-{
-   if (fd < 0) return 0;
-
-#ifdef _WIN32
-   unsigned long mode = blocking ? 0 : 1;
-   return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? 1 : 0;
-#else
-   int flags = fcntl(fd, F_GETFL, 0);
-   if (flags == -1) return 0;
-   flags = blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
-   return (fcntl(fd, F_SETFL, flags) == 0) ? 1 : 0;
-#endif
-}
 
 void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 		ALLEGRO_EVENT_QUEUE *queue, char* dir_path, PATHS* paths,ALLEGRO_FONT* font,
@@ -397,7 +383,7 @@ void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEG
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.20,0.20,0.80,
 						0.45, screen_width,screen_height, config,
 						"Join Server")&&click)
-				input_box(config,disp, event, queue, font);
+				input_box(config,disp,paths, event, queue, font);
 				back=true;
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.20,0.55,0.80,
 						0.80, screen_width,screen_height, config,
@@ -430,8 +416,7 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 	//start the server
 	int server_socket;
 	int max_sd;
-	int *sockets_list;
-	int max_karts=10;
+	node_t sockets_head;
 	uint16_t player_number;
 	player_number=0;
 	server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -441,14 +426,16 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 	server_address.sin_family = AF_INET;
 	server_address.sin_port = htons(PORT);
 	server_address.sin_addr.s_addr = IP;
-	bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+	if(bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))==-1){
+		fprintf(stderr, "Error: could not bind to socket\n");
+	}
 
 	// This makes server listen to new connections
 	listen(server_socket, 200);
 	
 	// List of sockets for select.select()
-	sockets_list=malloc(sizeof(int)*max_karts);
-	sockets_list[0] = server_socket;
+	sockets_head.value = server_socket;
+	sockets_head.next = NULL;
 	
 	if(!SetSocketBlockingEnabled(server_socket, 0)){
 		printf("Was not able to block");
@@ -461,74 +448,80 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 	_Bool first = true;
 	int screen_width; int screen_height;
 	_Bool back= false;
-	while(true){
+	//while(true){
 		//check if someone sent information
 		
-		fd_set read;
-		fd_set error;
-		FD_ZERO(&read);FD_ZERO(&error);
-		
-		//add all sockets to set
-		int i=0;
-		while(i<am_sockets){
-			FD_SET(sockets_list[i], &read);
-			FD_SET(sockets_list[i], &error);
-			i++;
-		}
-		struct timeval time_s = {0,0};
-		int ret =select(1+max_sd, &read, NULL, &error, &time_s);
-		if(ret>0){
-			// If notified socket is a server socket - new connection, accept it
-			if(FD_ISSET(server_socket, &read)){
-				sockets_list[am_sockets] = accept(server_socket, NULL, NULL);
-				if(!SetSocketBlockingEnabled(sockets_list[am_sockets], 0)){
-				}
-				printf("Someone joined\n");
-				printf("Sended amsockets:%d\n");
-
-				uint16_t net_am_sockets =  htons(am_sockets);
-				send(sockets_list[am_sockets], &net_am_sockets, sizeof(uint16_t), 0);
-				if(sockets_list[am_sockets]>max_sd)max_sd = sockets_list[am_sockets];
-				am_sockets++;
-			}
-		}
-
-		_Bool click = false;
-		_Bool EndProgram=false;
-		_Bool redraw = false;
-		handle_display(&screen_width,&screen_height,first, disp,event, queue, font);
-		if(event->type == ALLEGRO_EVENT_KEY_DOWN 
-				&& event->keyboard.keycode == ALLEGRO_KEY_ESCAPE)
-			return;
-		_Bool mouse_down;
-		if(first|al_is_event_queue_empty(queue)){
-			al_clear_to_color(al_map_rgb(0,0,0));
-			ALLEGRO_MOUSE_STATE mouse_state;
-			al_get_mouse_state(&mouse_state);
-			mouse_down = (_Bool)(mouse_state.buttons&0x1);
-			if(mouse_down && !prev_mouse_down){
-				click =true;
-			}
-			int i=0;
-			while(i<am_sockets){
-				al_draw_rectangle(10,i*100, 200, i*100+80, config->button_border_color
-						,config->button_border_thickness);
-				i++;
-			}
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.5,0.1,0.9,0.4,
-						screen_width,screen_height,config,"Start race")
-					&&click){
-				singleplayer_race(track,filename,config,disp,paths,event,queue, font);
-			}
-
-			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
-			al_flip_display();
-		}
-		first=back;
-		back=false;
-		prev_mouse_down = mouse_down;
-		al_wait_for_event(queue,event);
-	}
+//		fd_set read;
+//		fd_set error;
+//		FD_ZERO(&read);FD_ZERO(&error);
+//		
+//		//add all sockets to set
+//		int i=0;
+//		while(i<am_sockets){
+//			FD_SET(sockets_list[i], &read);
+//			FD_SET(sockets_list[i], &error);
+//			i++;
+//		}
+//		struct timeval time_s = {0,0};
+//		int ret =select(1+max_sd, &read, NULL, &error, &time_s);
+//		if(ret>0){
+//			// If notified socket is a server socket - new connection, accept it
+//			if(FD_ISSET(server_socket, &read)){
+//				sockets_list[am_sockets] = accept(server_socket, NULL, NULL);
+//				if(!SetSocketBlockingEnabled(sockets_list[am_sockets], 0)){
+//				}
+//				printf("Someone joined\n");
+//				printf("Sended amsockets:%d\n");
+//
+//				uint16_t net_am_sockets =  htons(am_sockets);
+//				send(sockets_list[am_sockets], &net_am_sockets, sizeof(uint16_t), 0);
+//				if(sockets_list[am_sockets]>max_sd)max_sd = sockets_list[am_sockets];
+//				am_sockets++;
+//			}
+//		}
+//
+//		_Bool click = false;
+//		_Bool EndProgram=false;
+//		_Bool redraw = false;
+//		handle_display(&screen_width,&screen_height,first, disp,event, queue, font);
+//		if(event->type == ALLEGRO_EVENT_KEY_DOWN 
+//				&& event->keyboard.keycode == ALLEGRO_KEY_ESCAPE)
+//			return;
+//		_Bool mouse_down;
+//		if(first|al_is_event_queue_empty(queue)){
+//			al_clear_to_color(al_map_rgb(0,0,0));
+//			ALLEGRO_MOUSE_STATE mouse_state;
+//			al_get_mouse_state(&mouse_state);
+//			mouse_down = (_Bool)(mouse_state.buttons&0x1);
+//			if(mouse_down && !prev_mouse_down){
+//				click =true;
+//			}
+//			int i=0;
+//			while(i<am_sockets){
+//				al_draw_rectangle(10,i*100, 200, i*100+80, config->button_border_color
+//						,config->button_border_thickness);
+//				i++;
+//			}
+//			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.5,0.1,0.9,0.4,
+//						screen_width,screen_height,config,"Start race")
+//					&&click){
+				server_race(server_socket, max_sd, &sockets_head,
+						track,filename,config,disp,paths,event,
+						queue, font);
+				close(server_socket);
+				/*singleplayer_race(track,filename,config,disp,paths,event,queue, 
+						font);*/
+//				back=true;
+//			}
+//
+//			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
+//			al_flip_display();
+//		}
+//		first=back;
+//		back=false;
+//		prev_mouse_down = mouse_down;
+//		al_wait_for_event(queue,event);
+//	}
 }
 
 

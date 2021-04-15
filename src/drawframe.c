@@ -33,7 +33,7 @@ void drawmap_with_karts(int am_karts,kart_t *karts//0th element is seen as main 
 }
 	
 
-void drawframe(int am_karts,kart_t *karts//0th element is seen as main kart
+void drawframe(int am_karts,int main_kart, kart_t *karts//0th element is seen as main kart
 		, float scale, int screen_width, int screen_height, TRACK_DATA* track,
 		/*Only used if camera is set to be relative to the track*/float track_angle,
 		CONFIG* config){
@@ -45,7 +45,7 @@ void drawframe(int am_karts,kart_t *karts//0th element is seen as main kart
 			angle=M_PI;
 			break;
 		case(RELATIVE_TO_KART):
-			angle=-karts[0].angle-M_PI/2;
+			angle=-karts[main_kart].angle-M_PI/2;
 			break;
 		case(RELATIVE_TO_TRACK):
 			angle=-track_angle-M_PI/2;
@@ -53,13 +53,13 @@ void drawframe(int am_karts,kart_t *karts//0th element is seen as main kart
 	}
 	int i =0;
 	while(i<am_karts){
-		drawkart(karts[0].x,karts[0].y,angle, scale, screen_width, screen_height,karts[i],
-				config);
+		drawkart(karts[main_kart].x,karts[main_kart].y,angle, scale, screen_width, 
+				screen_height,karts[i],config);
 		i++;
 	}
 	ALLEGRO_TRANSFORM transform;
 	al_identity_transform(&transform);
-	al_translate_transform(&transform, -karts[0].x,-karts[0].y );
+	al_translate_transform(&transform, -karts[main_kart].x,-karts[main_kart].y );
 	al_rotate_transform(&transform , angle);
 	al_scale_transform(&transform, scale,scale);
 	al_translate_transform(&transform, screen_width/2,screen_height/2);
