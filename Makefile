@@ -4,7 +4,7 @@ LICENSEDIR ?= /usr/share/licenses
 BINDIR ?= ${PREFIX}/bin
 
 OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/input_boxes.o src/kart.o src/main.o src/misc.o src/race.o src/record.o  src/connect_server.o src/networking.o
-libs=-lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image /home/thomas/tech/Agui/libagui.a /home/thomas/tech/Agui/libagui_allegro5.a
+libs=-lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image /home/thomas/tech/Agui/libagui.a #/home/thomas/tech/Agui/libagui_allegro5.a
 
 CFLAGS= -g
 
@@ -12,7 +12,7 @@ default: zobrollo
 
 
 zobrollo: $(OBJ)
-	g++ $(CFLAGS) $(OBJ) $(libs)
+	g++ $(CFLAGS) $(OBJ) $(libs) -o zobrollo
 
 src/main.o: src/main.c src/config.o src/misc.o src/file_paths.h src/race.o src/record.o src/ghost.o src/gui.o src/input_boxes.o
 src/input_boxes.o: src/input_boxes.cpp

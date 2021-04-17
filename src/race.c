@@ -260,6 +260,8 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 
 	double start_time;
 
+	int position;//the position the player is in at the end of the race
+
 	//only used if connection==NONE
 	ALLEGRO_FILE* record_file;
 
@@ -393,16 +395,12 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				int i =1;
 				while(socket){
 					if(FD_ISSET(socket->value, &read)){
-						printf("before 343 loop\n");
 						while(1){//always get the newest message
 							errno=0;
-							printf("343\n");
 							int ret=recv(socket->value, karts+i, 
 									sizeof(kart_t),0);
 							if(ret<=0)
 								break;
-							printf("ret=%d,%f,%f,%f\n",ret, karts[i].angle,
-									karts[i].x, karts[i].y);
 							/*if(errno == ENOTCONN | errno == EAGAIN || errno == EWOULDBLOCK)
 								break;*/
 						}
@@ -411,7 +409,6 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 					socket = socket->next;
 				}
 				n_karts=i;
-				printf("n_karts: %d\n", n_karts);
 			}
 			//send it to all the clients
 			node_t* prev_socket = sockets_head;
@@ -423,7 +420,6 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				
 				uint16_t net_n_karts =  htons(n_karts);
 				ssize_t ret;
-				printf("A send\n");
 				ret=send(socket->value, &net_n_karts, sizeof(uint16_t), MSG_NOSIGNAL);
 				if(ret <= 0, errno==EPIPE || errno ==SIGPIPE){
 					del_node(prev_socket);
@@ -434,9 +430,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 
 				//send player number
 				uint16_t net_i = htons(i);
-				printf("B send\n");
 				ret = send(socket->value, &net_i, sizeof(uint16_t), MSG_NOSIGNAL);
-				printf("A B send\n");
 				if(ret <= 0, errno==EPIPE || errno ==SIGPIPE){
 					del_node(prev_socket);
 					socket = prev_socket;
@@ -446,14 +440,12 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				
 				//send the data of all the karts
 				ret = send(socket->value, karts, sizeof(kart_t)*n_karts,MSG_NOSIGNAL);
-				printf("C send\n");
 				if(ret <= 0, errno==EPIPE || errno ==SIGPIPE){
 					del_node(prev_socket);
 					socket = prev_socket;
 					n_karts--;
 					goto endofwile;
 				}
-				printf("D send\n");
 
 endofwile:			prev_socket = socket;
 				socket=socket->next;
@@ -588,11 +580,21 @@ endofwile:			prev_socket = socket;
 							//local_dir/ghosts/%trackname%/%time%.bin
 							if(config->save_ghost){
 
+
 								store_ghost(filename, paths, 
 									date_string,frame,
 									config->fps, ghost_buf);
+							}
 							al_change_directory(paths->data);
 							int frame_i = 0;
+							}else{
+								int i = 0;
+								position=1;
+								while(i<n_karts){
+									position+=karts[i].mode
+										==END;
+									i++;
+								}
 							}
 						}
 						max_segment = 0;
@@ -673,7 +675,6 @@ endofwile:			prev_socket = socket;
 				n_karts=2;
 			}
 			karts[player_number]=kart;
-			printf("%f,%f,%f\n", karts[1].angle, karts[1].x, karts[1].y);
 			drawframe(n_karts,player_number, karts, scale,screen_width,screen_height,
 					track, track_angle, config);
 			//Draw hearts
@@ -772,13 +773,19 @@ endofwile:			prev_socket = socket;
 			if(kart.mode==END){
 				char* complete_text;
 				if(stopwatch==-1)complete_text="YOU CRASHED!";
-				else
+				else if(connection==NONE)
 					complete_text=SecToString(stopwatch);
+				else{
+					complete_text = malloc(sizeof(char)*2);
+					sprintf(complete_text, "%d", position);
+				}
+						
 
 				al_draw_text(splash, al_map_rgb(255, 255, 255), screen_width/2-
 						al_get_text_width(splash,complete_text)/2, 
 						screen_height/2-al_get_font_ascent(splash)/2,0, 
 						complete_text);
+				//free(complete_text);
 			}
 			al_flip_display();
 
