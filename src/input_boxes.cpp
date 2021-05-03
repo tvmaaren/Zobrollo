@@ -17,20 +17,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 e-mail:thomas.v.maaren@outlook.com
 */
+#include <allegro5/allegro5.h>
+#include <allegro5/allegro_font.h>
 
 #include <Agui/Agui.hpp>
 #include <Agui/Backends/Allegro5/Allegro5.hpp>
 
 #include <Agui/Widgets/TextField/TextField.hpp>
 #include <Agui/FlowLayout.hpp>
-#include <sys/types.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
-
-#include <allegro5/allegro5.h>
-#include <allegro5/allegro_font.h>
-
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
 
 #include <iostream>
 
@@ -44,6 +46,7 @@ e-mail:thomas.v.maaren@outlook.com
 //#include "connect_server.h"
 
 #define FRAME_RATE 60
+#define PORT 8888
 
 //Globals
 ALLEGRO_DISPLAY *disp = NULL;
@@ -130,10 +133,7 @@ void initializeAgui()
 	//Set the graphics handler
 	gui->setGraphics(graphicsHandler);
 
-	defaultFont = agui::Font::load("/usr/share/fonts/TTF/DejaVuSans.ttf",16);
 
-	//Setting a global font is required and failure to do so will crash.
-	agui::Widget::setGlobalFont(defaultFont);
 
 
 }
@@ -177,7 +177,13 @@ int input_box(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths,ALLEGRO_EVENT*
 	text_in_box = "";
 
 	initializeAgui();
+	printf("Dir=%s\n", al_get_current_directory());
+	printf("font=%s\n", config->font_name);
+	printf("After defaultFont\n");
+	defaultFont = agui::Font::load(config->font_name,16);
+	agui::Widget::setGlobalFont(defaultFont);
 	addWidgets();
+	printf("After addWidgets\n");
 	bool needRedraw = true;
 	// Start the event queue to handle keyboard input, mouse and our timer
 	
@@ -215,33 +221,49 @@ int input_box(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths,ALLEGRO_EVENT*
 				i++;
 			}
 			server_ip[i]='\0';
+#ifdef _WIN32
+			WSADATA wsa;
+			printf("Initialising winsock\n");
+			if(WSAStartup(0x0202, &wsa)){
+				error_message("Initialising winsock");
+				return(1);
+			}
+			printf("Winsock has been initialised\n");
+#endif
+
 			printf("Trying to connect to %s\n", server_ip);
 			int client_socket;
-			client_socket = socket(AF_INET, SOCK_STREAM,0);
+			if((client_socket = socket(AF_INET, SOCK_STREAM,0))==-1){
+				error_message("to create socket");
+				return(1);
+			}
+			printf("Created socket %d\n and invalid would be %d\n",client_socket, -1);
 			struct sockaddr_in server_address;
 			server_address.sin_family = AF_INET;
-			server_address.sin_port = htons(1234);
-			if(!inet_aton(server_ip, &server_address.sin_addr)){
+			server_address.sin_port = htons(PORT);
+#ifdef _WIN32
+			server_address.sin_addr.s_addr = inet_addr(server_ip);
+			if(server_address.sin_addr.s_addr==INADDR_ANY)
+#else
+			if(!inet_aton(server_ip, &server_address.sin_addr))
+#endif
+			{
 				fprintf(stderr, "Invalid IP address\n");
 				exit(1);
 			}
 			//server_address.sin_addr.s_addr = inet_addr(server_ip);	
 			if(connect(client_socket, (struct sockaddr *)&server_address, 
-						sizeof(server_address))==-1){
-				fprintf(stderr, "Could not connect to the server\n");
+						sizeof(server_address))<0){
+				error_message("Connecting to the server");
 				cleanUp();
 				return(1);
 			}
-			/*printf("Receiving player number\n");
-			uint16_t recv_player_number;
-			recv(client_socket, &recv_player_number, sizeof(uint16_t), 0);
-			player_number = ntohs(recv_player_number);*/
-
-
+			printf("connected\n");
 			if(!SetSocketBlockingEnabled(client_socket, 0)){
-				printf("Was not able to block");
+				error_message("blocking soket");
+				return(1);
 			}
-			cleanUp();
+			//cleanUp();
 			//wait_for_server(config, disp, event,queue,font);
 			connect_server_race(client_socket, player_number,
 					config, disp, paths, 

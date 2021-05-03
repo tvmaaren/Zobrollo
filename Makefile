@@ -1,23 +1,35 @@
-PREFIX ?= /us
+PREFIX ?= /usr
 DATADIR ?= ${PREFIX}/share/zobrollo
 LICENSEDIR ?= /usr/share/licenses
 BINDIR ?= ${PREFIX}/bin
+PLATFORM ?= linux
 
-OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/input_boxes.o src/kart.o src/main.o src/misc.o src/race.o src/record.o  src/connect_server.o src/networking.o
-libs=-lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image /home/thomas/tech/Agui/libagui.a #/home/thomas/tech/Agui/libagui_allegro5.a
+OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/kart.o src/main.o src/misc.o src/race.o src/record.o  src/connect_server.o src/networking.o src/input_boxes.o 
+libs=-lagui -lagui_allegro5 -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image  
+
 
 CFLAGS= -g
 
+ifeq ($(PLATFORM),  linux)
+	CC=gcc
+	CXX=g++
+	executable=zobrollo
+endif
+
+ifeq ($(PLATFORM),  windows)
+	CC=x86_64-w64-mingw32-gcc
+	CXX=x86_64-w64-mingw32-g++
+	libs += -lws2_32 #winsock is only for windows
+	executable=zobrollo.exe
+endif
+
 default: zobrollo
 
-
 zobrollo: $(OBJ)
-	g++ $(CFLAGS) $(OBJ) $(libs) -o zobrollo
+	$(CXX) $(CFLAGS) $(OBJ) $(libs) -o $(executable)
 
 src/main.o: src/main.c src/config.o src/misc.o src/file_paths.h src/race.o src/record.o src/ghost.o src/gui.o src/input_boxes.o
 src/input_boxes.o: src/input_boxes.cpp
-	g++ -g -c src/input_boxes.cpp -o src/input_boxes.o
-
 src/race.o: src/race.c src/drawtrack.o src/kart.o src/config.o src/file_paths.h src/misc.o src/record.o src/drawframe.o
 src/record.o:src/record.c src/file_paths.h src/config.o src/misc.o src/gui.o src/ghost.o
 src/ghost.o:src/ghost.c src/config.o src/drawtrack.o src/misc.o src/drawframe.o
@@ -34,7 +46,7 @@ src/networking.o: src/networking.c
 
 
 clean:
-	rm src/*.o zobrollo
+	rm src/*.o $(executable)
 
 install: default
 	install -Dm755 zobrollo ${DESTDIR}${BINDIR}/zobrollo

@@ -21,8 +21,9 @@ e-mail:thomas.v.maaren@outlook.com
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
-#define PORT 1234
+#define PORT 8888
 #define IP INADDR_ANY
 
 #include <allegro5/allegro_image.h>
@@ -31,10 +32,14 @@ e-mail:thomas.v.maaren@outlook.com
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
 
 #include "networking.h"
 #include "config.h"
@@ -70,6 +75,7 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 
 void main(){
 	//get directories
+	printf("hey\n");
 	PATHS paths;
 	
 	paths.home= getenv(home_var);
@@ -110,6 +116,7 @@ void main(){
 	}
 	CONFIG config;
 	get_config(&config, cfg);
+	printf("after config\n");
 	
 	
 	//initialize and check for errors
@@ -377,7 +384,6 @@ void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEG
 			al_get_mouse_state(&mouse_state);
 			mouse_down = (_Bool)(mouse_state.buttons&0x1);
 			if(mouse_down && !prev_mouse_down){
-				printf("click\n");
 				click =true;
 			}
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.20,0.20,0.80,
@@ -405,21 +411,81 @@ void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEG
 }
 void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_DISPLAY* disp, 
 		PATHS* paths,ALLEGRO_EVENT* event,ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
+	int server_socket , new_socket;
+	struct sockaddr_in server , client;
+	int max_sd;
+	int c;
+#ifdef __WIN32
+	WSADATA wsa;
+	printf("\nInitialising Winsock...");
+	if (WSAStartup(MAKEWORD(2,2),&wsa) != 0)
+	{
+		printf("Failed. Error Code : %d",WSAGetLastError());
+		return;
+	}
+	
+	printf("Initialised.\n");
+#else
+	//Otherwise a SIGPIPE signal would crash the program
+	sigaction(SIGPIPE, &(struct sigaction){SIG_IGN}, NULL);
+#endif
+	//Create a socket
+	if((server_socket = socket(AF_INET , SOCK_STREAM , 0 )) == -1)
+	{
+		error_message("creating socket");
+		return;
+	}
+	max_sd = server_socket;
+
+	printf("Socket created.\n");
+	
+	//Prepare the sockaddr_in structure
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons( 8888 );
+	
+	//Bind
+	if( bind(server_socket ,(struct sockaddr *)&server , sizeof(server)) == -1)
+	{
+		error_message("To bind");
+	}
+	
+	puts("Bind done");
+	
+
+	//Listen to incoming connections
+	listen(server_socket , 3);
+	
+	node_t sockets_head;
+	sockets_head.value = server_socket;
+	sockets_head.next = NULL;
+	
+	//Accept and incoming connection
+puts("Waiting for incoming connections...");
+
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/
-	_Bool prev_mouse_down = true;
-
-
-
-
+	/*_Bool prev_mouse_down = true;
 
 	//start the server
+	WSADATA wsa;
+	printf("Initialising winsock\n");
+	if(WSAStartup(0x0202, &wsa)){
+		error_message("Initialising winsock");
+		return;
+	}
+	printf("Winsock has been initialised\n");
+
 	int server_socket;
 	int max_sd;
 	node_t sockets_head;
 	uint16_t player_number;
 	player_number=0;
-	server_socket = socket(AF_INET, SOCK_STREAM, 0);
+	if(server_socket = socket(AF_INET, SOCK_STREAM,0)==-1){
+		error_message("to create socket");
+		return;
+	}
+	printf("Socket has been created\n");
 	max_sd = server_socket;
 	
 	struct sockaddr_in server_address;
@@ -428,8 +494,9 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 	server_address.sin_addr.s_addr = IP;
 	if(bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))==-1){
 		fprintf(stderr, "Error: could not bind to socket\n");
+		return;
 	}
-
+	printf("Bind done\n");
 	// This makes server listen to new connections
 	listen(server_socket, 200);
 	
@@ -447,7 +514,7 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 
 	_Bool first = true;
 	int screen_width; int screen_height;
-	_Bool back= false;
+	_Bool back= false;*/
 	//while(true){
 		//check if someone sent information
 		
@@ -509,8 +576,6 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 						track,filename,config,disp,paths,event,
 						queue, font);
 				close(server_socket);
-				/*singleplayer_race(track,filename,config,disp,paths,event,queue, 
-						font);*/
 //				back=true;
 //			}
 //
@@ -522,6 +587,9 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 //		prev_mouse_down = mouse_down;
 //		al_wait_for_event(queue,event);
 //	}
+#ifdef __WIN32
+	WSACleanup();
+#endif
 }
 
 

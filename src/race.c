@@ -26,10 +26,13 @@ e-mail:thomas.v.maaren@outlook.com
 #include <allegro5/allegro_image.h>
 
 //networking and stuff
-#include <sys/types.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
 
 #include <math.h>
 #include <stdio.h>
@@ -139,13 +142,13 @@ void store_ghost(char* filename, PATHS* paths,char* date_string, int frames, int
 }
 
 void sendtrack(TRACK_DATA* track, int socket){
-	ssize_t ret = send(socket, track, sizeof(TRACK_DATA),0);
+	ssize_t ret = send(socket, (void*)track, sizeof(TRACK_DATA),0);
 	if(ret!=sizeof(TRACK_DATA))
 		fprintf(stderr, "Error: Did not send track correctly\n");
 	int i =0;
 	while(i<track->n_segments){
 		_Bool type = track->segment_types[i];
-		send(socket, &type, sizeof(_Bool),0);
+		send(socket, (void*)&type, sizeof(_Bool),0);
 		size_t segment_size = type ? sizeof(CIRCLE_SEGMENT) : sizeof(LINE_SEGMENT);
 		send(socket, track->segments[i], segment_size, 0);
 		i++;
@@ -154,7 +157,7 @@ void sendtrack(TRACK_DATA* track, int socket){
 
 void recvtrack(TRACK_DATA* track, int socket){
 	SetSocketBlockingEnabled(socket, 1);
-	recv(socket, track, sizeof(TRACK_DATA), 0);
+	recv(socket, (void*)track, sizeof(TRACK_DATA), 0);
 	
 	track->segments = malloc(sizeof(void*)*track->n_segments);
 	track->segment_types = malloc(sizeof(_Bool)*track->n_segments);
@@ -166,7 +169,7 @@ void recvtrack(TRACK_DATA* track, int socket){
 	int i = 0;
 	while(i<track->n_segments){
 		_Bool type;
-		recv(socket, &type, sizeof(_Bool), 0);
+		recv(socket, (void*)&type, sizeof(_Bool), 0);
 		track->segment_types[i] = type;
 		size_t segment_size = type ? sizeof(CIRCLE_SEGMENT) : sizeof(LINE_SEGMENT);
 		track->segments[i] = malloc(segment_size);
@@ -228,7 +231,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 	int n_karts;
 	_Bool found_ghost_file=false;
 	int player_number;
-	kart_t karts[10];//All the karts
+	kart_t*karts = malloc(sizeof(kart_t)*10);//All the karts
 	kart_t kart;//The kart of this player
 
 
@@ -358,7 +361,6 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 			FD_ZERO(&read);FD_ZERO(&error);
 			
 			//add all sockets to set
-			int i=0;
 			node_t* socket = sockets_head;
 			while(true){
 				FD_SET(socket->value, &read);
@@ -371,10 +373,15 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 			node_t* sockets_tail = socket;
 			struct timeval time_s = {0,0};
 			int ret =select(1+max_sd, &read, NULL, &error, &time_s);
+			if(ret==-1){
+				error_message("reading for network events");
+				return;
+			}
 
-			if(ret>0){
+			//if(ret>0){
 				//If notified socket is a server socket - new connection, accept it
 				if(FD_ISSET(my_socket, &read)){
+					printf("Someone tried to connect\n");
 					add_node(sockets_tail)->value = accept(my_socket, NULL, NULL);
 					n_karts++;
 					sockets_tail = sockets_tail->next;
@@ -397,7 +404,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 					if(FD_ISSET(socket->value, &read)){
 						while(1){//always get the newest message
 							errno=0;
-							int ret=recv(socket->value, karts+i, 
+							int ret=recv(socket->value,(void*)(karts+i), 
 									sizeof(kart_t),0);
 							if(ret<=0)
 								break;
@@ -409,7 +416,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 					socket = socket->next;
 				}
 				n_karts=i;
-			}
+			//}
 			//send it to all the clients
 			node_t* prev_socket = sockets_head;
 			socket = sockets_head->next;
@@ -420,8 +427,9 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				
 				uint16_t net_n_karts =  htons(n_karts);
 				ssize_t ret;
-				ret=send(socket->value, &net_n_karts, sizeof(uint16_t), MSG_NOSIGNAL);
-				if(ret <= 0, errno==EPIPE || errno ==SIGPIPE){
+				ret=send(socket->value,(void*) &net_n_karts, sizeof(uint16_t), 0/*MSG_NOSIGNAL*/);
+				if(ret <= 0/*|| errno==EPIPE || errno ==SIGPIPE*/){
+					error_message("to send n_karts\n");
 					del_node(prev_socket);
 					socket = prev_socket;
 					n_karts--;
@@ -430,8 +438,9 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 
 				//send player number
 				uint16_t net_i = htons(i);
-				ret = send(socket->value, &net_i, sizeof(uint16_t), MSG_NOSIGNAL);
-				if(ret <= 0, errno==EPIPE || errno ==SIGPIPE){
+				ret = send(socket->value,(void*) &net_i, sizeof(uint16_t), 0/*MSG_NOSIGNAL*/);
+				if(ret <= 0/*|| errno==EPIPE || errno ==SIGPIPE*/){
+					error_message("to send player_number\n");
 					del_node(prev_socket);
 					socket = prev_socket;
 					n_karts--;
@@ -439,8 +448,15 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				}
 				
 				//send the data of all the karts
-				ret = send(socket->value, karts, sizeof(kart_t)*n_karts,MSG_NOSIGNAL);
-				if(ret <= 0, errno==EPIPE || errno ==SIGPIPE){
+				/*unsigned char r,g,b,a;
+				al_unmap_rgba(karts[0].color, &r, &g, &b, &a);
+				printf("karts[0] = {%f,%f,%f,%d, (%d,%d,%d,%d)}\n",karts[0].angle,
+						karts[0].x,karts[0].y,karts[0].mode,r,g,b,a);*/
+
+				karts[0] = kart;
+				ret = send(socket->value,(void*) karts, sizeof(kart_t)*n_karts,0/*MSG_NOSIGNAL*/);
+				if(ret <= 0/*|| errno==EPIPE || errno ==SIGPIPE*/){
+					error_message("to send player_number\n");
 					del_node(prev_socket);
 					socket = prev_socket;
 					n_karts--;
@@ -456,7 +472,7 @@ endofwile:			prev_socket = socket;
 			//send own kart data
 			kart_t msg;
 			msg=kart;
-			send(my_socket, &msg, sizeof(kart_t),0);
+			send(my_socket,(void*)&msg, sizeof(kart_t),0);
 			int c =0;
 			while(1){
 				errno =0;
@@ -467,34 +483,33 @@ endofwile:			prev_socket = socket;
 				 * that I have worked out is that it will not accept more than ten
 				 * player more than the previous round*/	
 				uint16_t recv_n_karts;
-				recv(my_socket, &recv_n_karts, sizeof(uint16_t),0);
-				//printf("382\n");
-				if(errno == EAGAIN || errno == EWOULDBLOCK){
+				if((recv(my_socket,(void*)&recv_n_karts, sizeof(uint16_t),0))==-1)
 					break;
-				}
+
+				
 				recv_n_karts = ntohs(recv_n_karts);
-				//printf("recv_n_karts: %d\n", recv_n_karts);
 				if(recv_n_karts-n_karts<=10)n_karts=recv_n_karts;
 
 				//Get player-number
 				uint16_t net_player_number;
-				recv(my_socket, &net_player_number, sizeof(uint16_t),0);
+				recv(my_socket, (void*)&net_player_number, sizeof(uint16_t),0);
 				if(ntohs(net_player_number)>=0&&ntohs(net_player_number)<10){
 					player_number = ntohs(net_player_number);
 				}
+				
 
 
 				//receives all kart data
-				recv(my_socket, karts, sizeof(kart_t)*n_karts,0);
-				//printf("392\n");
-				if(errno == EAGAIN || errno == EWOULDBLOCK){
+				if(recv(my_socket,(void*) karts, sizeof(kart_t)*n_karts,0)==-1)
 					break;
-				}
 				c++;
 			}
+			char r,g,b,a;
+			al_unmap_rgba(karts[0].color, &r, &g, &b, &a);
 			karts[player_number] = msg;
 			//printf("End of while\n");
 		}
+		//printf("After Connect to server\n");
 
 		
 		if(kart.mode==COUNTDOWN){
@@ -805,6 +820,7 @@ endofwile:			prev_socket = socket;
 	if(found_ghost_file){
 		free(record_ghost_buf);
 	}
+	free(karts);
 	
 }
 
