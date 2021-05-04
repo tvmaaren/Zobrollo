@@ -1,18 +1,9 @@
 # Zobrollo
-Zobrollo is a 2d minimalistic top-view racing game programmed in C using the Allegro library. At this point of development you can only play in time trial. It also keeps of track of records you have made.
+
+Zobrollo is a 2d minimalistic top-view racing game programmed in C using the <a href=https://liballeg.org/>Allegro</a> library for Windows 10 and GNU/Linux. At this point of development you can play in Time Trial and the development for multiplayer is just getting started. The game also keeps of track of records you have made and you are able to rewatch previous races and play against them.
 
 # Dependencies
-You first need to make sure you have allegro installed. In some cases you might have to compile this yourselve as well.
-
-# Setting up font
-You will probably need to change the location of the font, before you can run the game. This you do by changing line 1 of `config.cfg`. By default this is the location of the font.
-```shell
-/usr/share/fonts/TTF/DejaVuSansCondensed-Bold.ttf
-```
-This is where this font is stored on Arch Linux. It is probably in a different location on your OS. For Debian for example it is stored here.
-```shell
-/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf
-```
+Dependencies are <a href=https://liballeg.org/>Allegro</a> and <a href=https://github.com/jmasterx/Agui>Agui</a>. Agui will probably need to be compiled from source.
 
 # Compilation
 For GNU/Linux Go to the directory you extracted the source to and run.
@@ -20,14 +11,6 @@ For GNU/Linux Go to the directory you extracted the source to and run.
 sudo make install
 ```
 After this you should be able to run the game by typing the command zobrollo.
-For other platforms. Go to the directory you extracted the source to and run make. In the directory of the program an executable should appear. This you should run to play the game.
-
-# How to run
-On UNIX-like operating systems use;
-```shell
-./zobrollo
-```
-This should start the game. You should keep the file `zobrollo` in this directory as this is also the place where the tracks and sprites that the program uses are stored.
 
 # Controls
 `UP`		Accelerate
@@ -36,23 +19,21 @@ This should start the game. You should keep the file `zobrollo` in this director
 `RIGHT`		Steer right
 `-`		Zoom out
 `=`		Zoom in
-`ESCAPE`	Go back to main menu
+`ESCAPE`	Go back
 `F11`		Toggle full screen
-
 # License
 This program is licensed under GPLv3.
 
 # To-do list
 <ol>
+	<li>Improve interface for multiplayer.</li>
 	<li>Add more tracks.</li>
-	<li>Be able to race against each other on a local network. I already have a working test for this I just haven't properly implemented it yet.</li>
-	<li>Be able to race with anyone in the world. For this I will need to write server-side software.</li>
-	<li>Be able to change controls in config file</li>
-	<li>A settings menu.</li>
+	<li>server-side-only software.</li>
+	<li>Better error-handling for config-files.</li>
+	<li>Be able to change controls in config file.</li>
 </ol>
 
 # Screenshots
-
 The main menu
 ![](screenshots/menu.png)
 The example track
