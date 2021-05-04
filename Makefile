@@ -4,7 +4,7 @@ LICENSEDIR ?= /usr/share/licenses
 BINDIR ?= ${PREFIX}/bin
 PLATFORM ?= linux
 
-OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/kart.o src/main.o src/misc.o src/race.o src/record.o  src/connect_server.o src/networking.o src/input_boxes.o 
+OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/kart.o src/main.o src/misc.o src/race.o src/record.o src/networking.o src/input_boxes.o 
 libs=-lagui -lagui_allegro5 -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image  
 
 
@@ -28,14 +28,13 @@ default: zobrollo
 zobrollo: $(OBJ)
 	$(CXX) $(CFLAGS) $(OBJ) $(libs) -o $(executable)
 
-src/main.o: src/main.c src/config.o src/misc.o src/file_paths.h src/race.o src/record.o src/ghost.o src/gui.o src/input_boxes.o
-src/input_boxes.o: src/input_boxes.cpp
-src/race.o: src/race.c src/drawtrack.o src/kart.o src/config.o src/file_paths.h src/misc.o src/record.o src/drawframe.o
-src/record.o:src/record.c src/file_paths.h src/config.o src/misc.o src/gui.o src/ghost.o
-src/ghost.o:src/ghost.c src/config.o src/drawtrack.o src/misc.o src/drawframe.o
+src/main.o: src/main.c src/config.o src/misc.o src/file_paths.h src/race.o src/record.o src/ghost.o src/gui.o src/input_boxes.o src/networking.o src/drawtrack.o src/display.o src/file_paths.h
+src/input_boxes.o: src/input_boxes.cpp src/misc.o src/networking.o src/config.o src/drawtrack.o src/race.o src/file_paths.h
+src/race.o: src/race.c src/drawtrack.o src/kart.o src/config.o src/file_paths.h src/misc.o src/record.o src/drawframe.o src/networking.o src/file_paths.h src/display.o
+src/record.o:src/record.c src/file_paths.h src/config.o src/misc.o src/gui.o src/ghost.o src/drawtrack.o
+src/ghost.o:src/ghost.c src/config.o src/drawtrack.o src/misc.o src/drawframe.o src/kart.o
 src/drawframe.o: src/drawframe.c src/config.o src/kart.o src/drawtrack.o src/misc.o
 src/drawtrack.o:  src/drawtrack.c src/misc.o
-src/connect_server.o: src/connect_server.c
 src/gui.o:src/gui.c src/config.o 
 src/config.o: src/config.c src/file_paths.h
 src/kart.o: src/kart.c
@@ -57,3 +56,5 @@ install: default
 	install -Dm644 tracks/Long\ Straight  ${DESTDIR}${DATADIR}/tracks/Long\ straight
 	install -Dm644 tracks/triangle  ${DESTDIR}${DATADIR}/tracks/triangle	
 	install -Dm644 LICENSE ${DESTDIR}${LICENSEDIR}/zobrollo/LICENSE
+	install -Dm644 DejaVuSans.LICENSE ${DESTDIR}${LICENSEDIR}/zobrollo/DejaVuSans.LICENSE
+	install -Dm644 DejaVuSans.ttf ${DESTDIR}${DATADIR}/DejaVuSans.ttf

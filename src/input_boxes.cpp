@@ -43,26 +43,16 @@ e-mail:thomas.v.maaren@outlook.com
 #include "input_boxes.h"
 #include "drawtrack.h"
 #include "race.h"
-//#include "connect_server.h"
 
-#define FRAME_RATE 60
 #define PORT 8888
 
-//Globals
-ALLEGRO_DISPLAY *disp = NULL;
-ALLEGRO_TIMER *timer = NULL;
-ALLEGRO_EVENT event;
-ALLEGRO_EVENT_QUEUE *queue = NULL;
-bool done = false;
+//globals
 agui::Gui *gui = NULL;
 agui::Allegro5Input* inputHandler = NULL;
 agui::Allegro5Graphics* graphicsHandler = NULL;
 
 agui::Font *defaultFont = NULL;
 std::string text_in_box;
-
-void wait_for_server(CONFIG* config,ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,ALLEGRO_EVENT_QUEUE *queue, 
-		ALLEGRO_FONT* font);
 
 class SimpleActionListener : public agui::ActionListener
 {
@@ -170,27 +160,17 @@ void cleanUp()
 
 int input_box(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths,ALLEGRO_EVENT* event,
 		ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
-	/*if (!initializeAllegro())
-	{
-		return 1;
-	}*/
+	bool done = false;
 	text_in_box = "";
 
 	initializeAgui();
-	printf("Dir=%s\n", al_get_current_directory());
-	printf("font=%s\n", config->font_name);
-	printf("After defaultFont\n");
 	defaultFont = agui::Font::load(config->font_name,16);
 	agui::Widget::setGlobalFont(defaultFont);
 	addWidgets();
-	printf("After addWidgets\n");
 	bool needRedraw = true;
 	// Start the event queue to handle keyboard input, mouse and our timer
 	
 	al_register_event_source(queue, (ALLEGRO_EVENT_SOURCE*)al_get_keyboard_event_source());
-	//al_register_event_source(queue, (ALLEGRO_EVENT_SOURCE*)al_get_mouse_event_source());
-	//al_register_event_source(queue, (ALLEGRO_EVENT_SOURCE*)timer);
-	//al_register_event_source(queue, (ALLEGRO_EVENT_SOURCE*)disp);
 
 
 	while(!done) {
@@ -237,21 +217,16 @@ int input_box(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths,ALLEGRO_EVENT*
 				error_message("to create socket");
 				return(1);
 			}
-			printf("Created socket %d\n and invalid would be %d\n",client_socket, -1);
+			printf("Created socket %d\n",client_socket);
 			struct sockaddr_in server_address;
 			server_address.sin_family = AF_INET;
 			server_address.sin_port = htons(PORT);
-#ifdef _WIN32
 			server_address.sin_addr.s_addr = inet_addr(server_ip);
 			if(server_address.sin_addr.s_addr==INADDR_ANY)
-#else
-			if(!inet_aton(server_ip, &server_address.sin_addr))
-#endif
 			{
 				fprintf(stderr, "Invalid IP address\n");
 				exit(1);
 			}
-			//server_address.sin_addr.s_addr = inet_addr(server_ip);	
 			if(connect(client_socket, (struct sockaddr *)&server_address, 
 						sizeof(server_address))<0){
 				error_message("Connecting to the server");
@@ -259,17 +234,14 @@ int input_box(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths,ALLEGRO_EVENT*
 				return(1);
 			}
 			printf("connected\n");
-			if(!SetSocketBlockingEnabled(client_socket, 0)){
+			if(!SetSocketBlocking(client_socket, 0)){
 				error_message("blocking soket");
 				return(1);
 			}
-			//cleanUp();
-			//wait_for_server(config, disp, event,queue,font);
 			connect_server_race(client_socket, player_number,
 					config, disp, paths, 
 					event, queue, font);
-			//shutdown(client_socket,2);
-			close(client_socket);//,2);
+			close(client_socket);
 			return(0);
 		}
 		

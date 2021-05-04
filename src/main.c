@@ -31,7 +31,6 @@ e-mail:thomas.v.maaren@outlook.com
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
-#include <sys/types.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -70,12 +69,11 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEGRO_EVENT* event,
 		ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font);
 
-void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_DISPLAY* disp, 
+void start_server(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_DISPLAY* disp, 
 		PATHS* paths,ALLEGRO_EVENT* event,ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font);
 
 void main(){
 	//get directories
-	printf("hey\n");
 	PATHS paths;
 	
 	paths.home= getenv(home_var);
@@ -116,7 +114,6 @@ void main(){
 	}
 	CONFIG config;
 	get_config(&config, cfg);
-	printf("after config\n");
 	
 	
 	//initialize and check for errors
@@ -353,7 +350,6 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 		}
 		first=back_from_race;
 		back_from_race=false;
-		back_from_race=false;
 		prev_mouse_down = mouse_down;
 		al_wait_for_event(queue,event);
 	}
@@ -394,9 +390,8 @@ void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEG
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.20,0.55,0.80,
 						0.80, screen_width,screen_height, config,
 						"Start Server")&&click){
-				//start_server_menu(config, disp, event, queue, font);
 				track_menu(config, disp, event, queue, data_dir sep_str "tracks",
-					paths, font, start_server_menu);
+					paths, font, start_server);
 				back=true;
 			}
 
@@ -409,7 +404,8 @@ void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEG
 		al_wait_for_event(queue,event);
 	}
 }
-void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_DISPLAY* disp, 
+
+void start_server(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_DISPLAY* disp, 
 		PATHS* paths,ALLEGRO_EVENT* event,ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
 	int server_socket , new_socket;
 	struct sockaddr_in server , client;
@@ -417,14 +413,12 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 	int c;
 #ifdef __WIN32
 	WSADATA wsa;
-	printf("\nInitialising Winsock...");
 	if (WSAStartup(MAKEWORD(2,2),&wsa) != 0)
 	{
 		printf("Failed. Error Code : %d",WSAGetLastError());
 		return;
 	}
 	
-	printf("Initialised.\n");
 #else
 	//Otherwise a SIGPIPE signal would crash the program
 	sigaction(SIGPIPE, &(struct sigaction){SIG_IGN}, NULL);
@@ -436,8 +430,6 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 		return;
 	}
 	max_sd = server_socket;
-
-	printf("Socket created.\n");
 	
 	//Prepare the sockaddr_in structure
 	server.sin_family = AF_INET;
@@ -450,8 +442,6 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 		error_message("To bind");
 	}
 	
-	puts("Bind done");
-	
 
 	//Listen to incoming connections
 	listen(server_socket , 3);
@@ -460,133 +450,10 @@ void start_server_menu(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_
 	sockets_head.value = server_socket;
 	sockets_head.next = NULL;
 	
-	//Accept and incoming connection
-puts("Waiting for incoming connections...");
-
-	/*true: In the previuous frame the mouse was down
-	 *false:The mouse is up*/
-	/*_Bool prev_mouse_down = true;
-
-	//start the server
-	WSADATA wsa;
-	printf("Initialising winsock\n");
-	if(WSAStartup(0x0202, &wsa)){
-		error_message("Initialising winsock");
-		return;
-	}
-	printf("Winsock has been initialised\n");
-
-	int server_socket;
-	int max_sd;
-	node_t sockets_head;
-	uint16_t player_number;
-	player_number=0;
-	if(server_socket = socket(AF_INET, SOCK_STREAM,0)==-1){
-		error_message("to create socket");
-		return;
-	}
-	printf("Socket has been created\n");
-	max_sd = server_socket;
-	
-	struct sockaddr_in server_address;
-	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(PORT);
-	server_address.sin_addr.s_addr = IP;
-	if(bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))==-1){
-		fprintf(stderr, "Error: could not bind to socket\n");
-		return;
-	}
-	printf("Bind done\n");
-	// This makes server listen to new connections
-	listen(server_socket, 200);
-	
-	// List of sockets for select.select()
-	sockets_head.value = server_socket;
-	sockets_head.next = NULL;
-	
-	if(!SetSocketBlockingEnabled(server_socket, 0)){
-		printf("Was not able to block");
-	}
-	
-	
-	printf("Listening for connections on %X:%d...\n",IP, PORT);
-	uint16_t am_sockets=1;
-
-	_Bool first = true;
-	int screen_width; int screen_height;
-	_Bool back= false;*/
-	//while(true){
-		//check if someone sent information
-		
-//		fd_set read;
-//		fd_set error;
-//		FD_ZERO(&read);FD_ZERO(&error);
-//		
-//		//add all sockets to set
-//		int i=0;
-//		while(i<am_sockets){
-//			FD_SET(sockets_list[i], &read);
-//			FD_SET(sockets_list[i], &error);
-//			i++;
-//		}
-//		struct timeval time_s = {0,0};
-//		int ret =select(1+max_sd, &read, NULL, &error, &time_s);
-//		if(ret>0){
-//			// If notified socket is a server socket - new connection, accept it
-//			if(FD_ISSET(server_socket, &read)){
-//				sockets_list[am_sockets] = accept(server_socket, NULL, NULL);
-//				if(!SetSocketBlockingEnabled(sockets_list[am_sockets], 0)){
-//				}
-//				printf("Someone joined\n");
-//				printf("Sended amsockets:%d\n");
-//
-//				uint16_t net_am_sockets =  htons(am_sockets);
-//				send(sockets_list[am_sockets], &net_am_sockets, sizeof(uint16_t), 0);
-//				if(sockets_list[am_sockets]>max_sd)max_sd = sockets_list[am_sockets];
-//				am_sockets++;
-//			}
-//		}
-//
-//		_Bool click = false;
-//		_Bool EndProgram=false;
-//		_Bool redraw = false;
-//		handle_display(&screen_width,&screen_height,first, disp,event, queue, font);
-//		if(event->type == ALLEGRO_EVENT_KEY_DOWN 
-//				&& event->keyboard.keycode == ALLEGRO_KEY_ESCAPE)
-//			return;
-//		_Bool mouse_down;
-//		if(first|al_is_event_queue_empty(queue)){
-//			al_clear_to_color(al_map_rgb(0,0,0));
-//			ALLEGRO_MOUSE_STATE mouse_state;
-//			al_get_mouse_state(&mouse_state);
-//			mouse_down = (_Bool)(mouse_state.buttons&0x1);
-//			if(mouse_down && !prev_mouse_down){
-//				click =true;
-//			}
-//			int i=0;
-//			while(i<am_sockets){
-//				al_draw_rectangle(10,i*100, 200, i*100+80, config->button_border_color
-//						,config->button_border_thickness);
-//				i++;
-//			}
-//			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.5,0.1,0.9,0.4,
-//						screen_width,screen_height,config,"Start race")
-//					&&click){
-				server_race(server_socket, max_sd, &sockets_head,
-						track,filename,config,disp,paths,event,
-						queue, font);
-				close(server_socket);
-//				back=true;
-//			}
-//
-//			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
-//			al_flip_display();
-//		}
-//		first=back;
-//		back=false;
-//		prev_mouse_down = mouse_down;
-//		al_wait_for_event(queue,event);
-//	}
+	server_race(server_socket, max_sd, &sockets_head,
+			track,filename,config,disp,paths,event,
+			queue, font);
+	close(server_socket);
 #ifdef __WIN32
 	WSACleanup();
 #endif

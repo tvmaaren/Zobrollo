@@ -50,11 +50,6 @@ e-mail:thomas.v.maaren@outlook.com
 #include "record.h"
 #include "drawframe.h"
 
-//the different modes of play
-//#define COUNTDOWN 0
-//#define PLAYING 1
-//#define END 2
-
 #define date_string_len 18
 
 char * SecToString(double  secs);//Easily display time
@@ -95,8 +90,7 @@ void store_record(char * filename, PATHS* paths, double stopwatch, char* date_st
 void store_ghost(char* filename, PATHS* paths,char* date_string, int frames, int fps, 
 		float*ghost_buf){
 	//remove \n
-	date_string[date_string_len-1]=
-		'\0';
+	date_string[date_string_len-1]='\0';
 	if(!al_change_directory(paths->ghost)){
 		al_make_directory(paths->ghost);
 		if(!al_change_directory(paths->ghost)){
@@ -105,39 +99,24 @@ void store_ghost(char* filename, PATHS* paths,char* date_string, int frames, int
 		}
 	}
 	
-	char ghost_filename[
-		strlen(filename)+1+
-		date_string_len+
-		sizeof(".bin")];
+	char ghost_filename[strlen(filename)+1+date_string_len+sizeof(".bin")];
 	strcpy(ghost_filename, filename);
 	strcat(ghost_filename, sep_str);
 	if(!al_make_directory(
 			ghost_filename)){
-		fprintf(stderr, 
-			"Error: Could not"
-			" create "
-			"\"%s\"\n",
-			ghost_filename);
+		fprintf(stderr, "Error: Could not create \"%s\"\n",ghost_filename);
 		exit(1);
 	}
 	strcat(ghost_filename,date_string);
 	strcat(ghost_filename, ".bin");
-	ALLEGRO_FILE* ghost_file = 
-		al_fopen(ghost_filename,
-		"wb");
+	ALLEGRO_FILE* ghost_file = al_fopen(ghost_filename,"wb");
 	if(ghost_file){
-		al_fwrite(ghost_file, 
-			&frames,sizeof(int));
-		al_fwrite(ghost_file,
-			&fps,
-			sizeof(float));
-		al_fwrite(ghost_file, 
-			ghost_buf, 3*frames*
-			sizeof(float));
+		al_fwrite(ghost_file,&frames,sizeof(int));
+		al_fwrite(ghost_file,&fps,sizeof(float));
+		al_fwrite(ghost_file, ghost_buf, 3*frames*sizeof(float));
 		al_fclose(ghost_file);
 	}else{
-		printf("Could not make"
-			" ghost file\n");
+		fprintf(stderr, "Could not make ghost file\n");
 	}
 }
 
@@ -156,7 +135,7 @@ void sendtrack(TRACK_DATA* track, int socket){
 }
 
 void recvtrack(TRACK_DATA* track, int socket){
-	SetSocketBlockingEnabled(socket, 1);
+	SetSocketBlocking(socket, 1);
 	recv(socket, (void*)track, sizeof(TRACK_DATA), 0);
 	
 	track->segments = malloc(sizeof(void*)*track->n_segments);
@@ -177,7 +156,7 @@ void recvtrack(TRACK_DATA* track, int socket){
 		
 		i++;
 	}
-	SetSocketBlockingEnabled(socket, 0);
+	SetSocketBlocking(socket, 0);
 }
 
 
@@ -231,7 +210,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 	int n_karts;
 	_Bool found_ghost_file=false;
 	int player_number;
-	kart_t*karts = malloc(sizeof(kart_t)*10);//All the karts
+	kart_t karts[10];//All the karts
 	kart_t kart;//The kart of this player
 
 
@@ -356,8 +335,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 		if(connection==SERVER){
 			//check if someone sent information
 			
-			fd_set read;
-			fd_set error;
+			fd_set read;fd_set error;
 			FD_ZERO(&read);FD_ZERO(&error);
 			
 			//add all sockets to set
@@ -377,58 +355,42 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				error_message("reading for network events");
 				return;
 			}
+			if(FD_ISSET(my_socket, &read)){
+				add_node(sockets_tail)->value = accept(my_socket, NULL, NULL);
+				n_karts++;
+				sockets_tail = sockets_tail->next;
+				SetSocketBlocking(sockets_tail->value, 0);
 
-			//if(ret>0){
-				//If notified socket is a server socket - new connection, accept it
-				if(FD_ISSET(my_socket, &read)){
-					printf("Someone tried to connect\n");
-					add_node(sockets_tail)->value = accept(my_socket, NULL, NULL);
-					n_karts++;
-					sockets_tail = sockets_tail->next;
-					if(!SetSocketBlockingEnabled(sockets_tail->value, 0)){
+				sendtrack(track, sockets_tail->value);
+				if(sockets_tail->value>max_sd)max_sd = 
+					sockets_tail->value;
+			}
+			//Else existing socket is sending a message
+			socket = sockets_head->next;//should only check clients
+			int i =1;
+			while(socket){
+				if(FD_ISSET(socket->value, &read)){
+					while(1){//always get the newest message
+						errno=0;
+						int ret=recv(socket->value,(void*)(karts+i), 
+								sizeof(kart_t),0);
+						if(ret<=0)
+							break;
 					}
-					//printf("Someone joined\n");
-					//printf("Sended amsockets:%d\n");
-
-					/*uint16_t net_n_karts =  htons(n_karts);
-					send(sockets_tail->value, &net_n_karts, 
-							sizeof(uint16_t), 0);*/
-					sendtrack(track, sockets_tail->value);
-					if(sockets_tail->value>max_sd)max_sd = 
-						sockets_tail->value;
 				}
-				//Else existing socket is sending a message
-				socket = sockets_head->next;//should only check clients
-				int i =1;
-				while(socket){
-					if(FD_ISSET(socket->value, &read)){
-						while(1){//always get the newest message
-							errno=0;
-							int ret=recv(socket->value,(void*)(karts+i), 
-									sizeof(kart_t),0);
-							if(ret<=0)
-								break;
-							/*if(errno == ENOTCONN | errno == EAGAIN || errno == EWOULDBLOCK)
-								break;*/
-						}
-					}
-					i++;
-					socket = socket->next;
-				}
-				n_karts=i;
-			//}
-			//send it to all the clients
+				i++;
+				socket = socket->next;
+			}
+			n_karts=i;
 			node_t* prev_socket = sockets_head;
 			socket = sockets_head->next;
 			i=1;
 			while(socket){
 				//first send the amount of karts
-				//printf("send n_karts: %d\n", n_karts);
-				
 				uint16_t net_n_karts =  htons(n_karts);
 				ssize_t ret;
-				ret=send(socket->value,(void*) &net_n_karts, sizeof(uint16_t), 0/*MSG_NOSIGNAL*/);
-				if(ret <= 0/*|| errno==EPIPE || errno ==SIGPIPE*/){
+				ret=send(socket->value,(void*) &net_n_karts, sizeof(uint16_t), 0);
+				if(ret <= 0){
 					error_message("to send n_karts\n");
 					del_node(prev_socket);
 					socket = prev_socket;
@@ -438,8 +400,8 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 
 				//send player number
 				uint16_t net_i = htons(i);
-				ret = send(socket->value,(void*) &net_i, sizeof(uint16_t), 0/*MSG_NOSIGNAL*/);
-				if(ret <= 0/*|| errno==EPIPE || errno ==SIGPIPE*/){
+				ret = send(socket->value,(void*) &net_i, sizeof(uint16_t), 0);
+				if(ret <= 0){
 					error_message("to send player_number\n");
 					del_node(prev_socket);
 					socket = prev_socket;
@@ -447,15 +409,9 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 					goto endofwile;
 				}
 				
-				//send the data of all the karts
-				/*unsigned char r,g,b,a;
-				al_unmap_rgba(karts[0].color, &r, &g, &b, &a);
-				printf("karts[0] = {%f,%f,%f,%d, (%d,%d,%d,%d)}\n",karts[0].angle,
-						karts[0].x,karts[0].y,karts[0].mode,r,g,b,a);*/
-
 				karts[0] = kart;
-				ret = send(socket->value,(void*) karts, sizeof(kart_t)*n_karts,0/*MSG_NOSIGNAL*/);
-				if(ret <= 0/*|| errno==EPIPE || errno ==SIGPIPE*/){
+				ret = send(socket->value,(void*) karts, sizeof(kart_t)*n_karts,0);
+				if(ret <= 0){
 					error_message("to send player_number\n");
 					del_node(prev_socket);
 					socket = prev_socket;
@@ -507,10 +463,7 @@ endofwile:			prev_socket = socket;
 			char r,g,b,a;
 			al_unmap_rgba(karts[0].color, &r, &g, &b, &a);
 			karts[player_number] = msg;
-			//printf("End of while\n");
 		}
-		//printf("After Connect to server\n");
-
 		
 		if(kart.mode==COUNTDOWN){
 			count_val = (int)(config->sec_before_start-al_get_timer_count(countdown));
@@ -800,7 +753,7 @@ endofwile:			prev_socket = socket;
 						al_get_text_width(splash,complete_text)/2, 
 						screen_height/2-al_get_font_ascent(splash)/2,0, 
 						complete_text);
-				//free(complete_text);
+				free(complete_text);
 			}
 			al_flip_display();
 
@@ -820,7 +773,6 @@ endofwile:			prev_socket = socket;
 	if(found_ghost_file){
 		free(record_ghost_buf);
 	}
-	free(karts);
 	
 }
 
