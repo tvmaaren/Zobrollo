@@ -44,13 +44,25 @@ e-mail:thomas.v.maaren@outlook.com
 #include "config.h"
 #include "misc.h"
 #include "file_paths.h"
-#include "input_boxes.h"
+#include "join_server.h"
 #include "ghost.h"
 #include "gui.h"
 #include "drawtrack.h"
+#include "start_server.h"
 #include "record.h"
 #include "race.h"
 #include "display.h"
+
+//Global variables
+
+ALLEGRO_EVENT event;
+ALLEGRO_DISPLAY* disp;
+int screen_width;
+int screen_height;
+ALLEGRO_EVENT_QUEUE* queue;
+PATHS paths;
+CONFIG config;
+
 
 typedef struct{
 	float x1frac;
@@ -60,21 +72,14 @@ typedef struct{
 }box_relative;
 
 
-void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
-		ALLEGRO_EVENT_QUEUE *queue, char* dir_path, PATHS* paths,ALLEGRO_FONT* font,
-		void (*click_func)(TRACK_DATA *track,char* filename,
-			CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths,ALLEGRO_EVENT* event,
-			ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font));
+void track_menu(void (*click_func)(TRACK_DATA *track,char* filename));
 
-void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEGRO_EVENT* event,
-		ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font);
+void multiplayer_menu();
 
-void start_server(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_DISPLAY* disp, 
-		PATHS* paths,ALLEGRO_EVENT* event,ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font);
+//void start_server(TRACK_DATA *track,char* filename);
 
 void main(){
 	//get directories
-	PATHS paths;
 	
 	paths.home= getenv(home_var);
 	
@@ -112,8 +117,7 @@ void main(){
 			exit(1);
 		}
 	}
-	CONFIG config;
-	get_config(&config, cfg);
+	get_config(cfg);
 	
 	
 	//initialize and check for errors
@@ -128,13 +132,11 @@ void main(){
 	
 	must_init(al_init_image_addon(), "image");
 
-	ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+	queue = al_create_event_queue();
 	must_init(queue,"queue");
 
 	al_register_event_source(queue, al_get_keyboard_event_source());
     	al_register_event_source(queue, al_get_timer_event_source(timer));
-
-
     	
 	must_init(al_init_font_addon(), "font addon");
 	must_init(al_init_ttf_addon(), "ttf");
@@ -144,32 +146,23 @@ void main(){
 	if(font==NULL){
 		fprintf(stderr, "Could not load font\n");
 	}
-	
-	ALLEGRO_EVENT event;
 
 	al_set_new_display_flags(ALLEGRO_RESIZABLE|ALLEGRO_WINDOWED);
-	ALLEGRO_DISPLAY* disp = al_create_display(config.window_width, config.window_height);
+	disp = al_create_display(config.window_width, config.window_height);
 	must_init(disp,"couldn't initialize display\n");
     	al_register_event_source(queue, al_get_display_event_source(disp));
 
 	must_init(al_install_mouse(), "mouse");
     	al_register_event_source(queue, al_get_mouse_event_source());
 
-	
-
 	_Bool first = true;
-	
-	int screen_width;
-	int screen_height;
-
 	_Bool back_from_race = false;
-
 
 	while(true){
 		al_acknowledge_resize(disp);
 		_Bool click = false;
 		_Bool EndProgram=false;
-		handle_display(&screen_width,&screen_height,first, disp,&event, queue, font);
+		handle_display(first,font);
 		_Bool mouse_down;
 		if(first|al_is_event_queue_empty(queue)){
 			ALLEGRO_MOUSE_STATE mouse_state;
@@ -187,25 +180,22 @@ void main(){
 					0.5*screen_width, 0.34*screen_height, 0.15*screen_width, 
 					0.1*screen_height);
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.3,0.42,0.7,0.55,
-						screen_width,screen_height,&config,"Time Trial")&&click){
-				track_menu(&config, disp, &event, queue, data_dir sep_str "tracks",
-						&paths,font,singleplayer_race);
+						"Time Trial")&&click){
+				track_menu(singleplayer_race);
 			}
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.3,0.57,0.7,0.70,
-						screen_width,screen_height,&config,"Multiplayer")&&click){
+						"Multiplayer")&&click){
 				multiplayer_menu(&config, disp, &paths, &event, queue, font);
 			}
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.3,0.72,0.49,0.85,
-						screen_width, screen_height, &config, "Records")&&
+						"Records")&&
 					click){
 				
-				track_menu(&config, disp, &event, queue, data_dir sep_str "tracks",
-						&paths, font, show_record);
+				track_menu(show_record);
 
 			}
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.51,0.72,0.7,0.85,
-						screen_width, screen_height, &config, "Quit")&&
-					click){
+						"Quit")&&click){
 				exit(1);
 			}
 			al_flip_display();
@@ -219,20 +209,17 @@ void main(){
 
 
 //Every file in the specified directory is an item in this menu
-void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
-		ALLEGRO_EVENT_QUEUE *queue, char* dir_path, PATHS* paths,ALLEGRO_FONT* font,
-		void (*click_func)(TRACK_DATA *track,char* filename,
-			CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths,ALLEGRO_EVENT* event,
-			ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font)){
+void track_menu(void (*click_func)(TRACK_DATA *track,char* filename)){
 
+	ALLEGRO_FONT* font =  al_create_builtin_font();
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/
 	_Bool prev_mouse_down = true;
 	
 	//get a list of file names
-	ALLEGRO_FS_ENTRY *dir = al_create_fs_entry(dir_path);
+	ALLEGRO_FS_ENTRY *dir = al_create_fs_entry("tracks/");
 	if(!al_open_directory(dir)){
-		fprintf(stderr, "Could not open \"%s\"\n", dir_path);
+		fprintf(stderr, "Could not open " data_dir"/tracks\n");
 		return;
 	}
 	
@@ -275,17 +262,15 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 
 	_Bool first = true;
 	
-	int screen_width; int screen_height;
-
 	_Bool back_from_race = false;
 
 	while(true){
 		_Bool click = false;
 		_Bool EndProgram=false;
 		_Bool redraw = false;
-		handle_display(&screen_width,&screen_height,first, disp,event, queue, font);
-		if(event->type == ALLEGRO_EVENT_KEY_DOWN 
-				&& event->keyboard.keycode == ALLEGRO_KEY_ESCAPE)
+		handle_display(first, font);
+		if(event.type == ALLEGRO_EVENT_KEY_DOWN 
+				&& event.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
 			return;
 		_Bool mouse_down;
 		if(first|al_is_event_queue_empty(queue)){
@@ -297,15 +282,14 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 				click =true;
 			}
 
-			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
+			al_draw_text(font, config.button_text_color, 0, 0, 0, "Zobrollo v" version);
 			i=0;
 			while(i<am_files){
 
 				_Bool mouse_in_box = handle_click_box_relative(mouse_state.x,
 						mouse_state.y, file_box[i].x1frac,
 						file_box[i].y1frac,file_box[i].x2frac,
-						file_box[i].y2frac, screen_width, 
-						screen_height, config, " ");
+						file_box[i].y2frac, " ");
 
 				//draw contents of the box
 				float box_width =file_box[i].x2frac-file_box[i].x1frac;
@@ -315,19 +299,19 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 				float track_x2=(box_width*0.9+file_box[i].x1frac)*screen_width;
 				float track_y2=(box_height*0.6+file_box[i].y1frac)*screen_height;
 				al_draw_rectangle(track_x1,track_y1,track_x2,track_y2,
-						config->button_border_color, 
-						config->button_border_thickness);
+						config.button_border_color, 
+						config.button_border_thickness);
 				al_draw_filled_rectangle(
-						track_x1+config->button_border_thickness/2,
-						track_y1+config->button_border_thickness/2,
-						track_x2-config->button_border_thickness/2,
-						track_y2-config->button_border_thickness/2,
+						track_x1+config.button_border_thickness/2,
+						track_y1+config.button_border_thickness/2,
+						track_x2-config.button_border_thickness/2,
+						track_y2-config.button_border_thickness/2,
 						al_map_rgb(0,0,0));
 						
 				drawmap(track_x1,track_y1,track_x2,track_y2,
 						NULL, tracks+i);
-				draw_text(config->font_name, file_names[i], 
-						config->button_text_color,
+				draw_text(config.font_name, file_names[i], 
+						config.button_text_color,
 						(box_width*0.5+file_box[i].x1frac)*screen_width,
 						(box_height*0.8+file_box[i].y1frac)*screen_height,
 						box_width*0.8*screen_width,
@@ -338,8 +322,7 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 
 				if(mouse_in_box && click){
 
-					click_func(tracks+i, file_names[i], config, disp, paths,
-							event, queue, font);
+					click_func(tracks+i, file_names[i]);
 					back_from_race=true;
 					al_flush_event_queue(queue);
 					break;
@@ -351,12 +334,14 @@ void track_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, ALLEGRO_EVENT* event,
 		first=back_from_race;
 		back_from_race=false;
 		prev_mouse_down = mouse_down;
-		al_wait_for_event(queue,event);
+		al_wait_for_event(queue,&event);
 	}
 }
 
-void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEGRO_EVENT* event,
-		ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
+void multiplayer_menu(){
+
+	ALLEGRO_FONT* font = al_create_builtin_font();
+
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/
 	_Bool prev_mouse_down = true;
@@ -369,9 +354,9 @@ void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEG
 		_Bool click = false;
 		_Bool EndProgram=false;
 		_Bool redraw = false;
-		handle_display(&screen_width,&screen_height,first, disp,event, queue, font);
-		if(event->type == ALLEGRO_EVENT_KEY_DOWN 
-				&& event->keyboard.keycode == ALLEGRO_KEY_ESCAPE)
+		handle_display(first,font);
+		if(event.type == ALLEGRO_EVENT_KEY_DOWN 
+				&& event.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
 			return;
 		_Bool mouse_down;
 		if(first|al_is_event_queue_empty(queue)){
@@ -383,15 +368,13 @@ void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEG
 				click =true;
 			}
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.20,0.20,0.80,
-						0.45, screen_width,screen_height, config,
-						"Join Server")&&click)
-				input_box(config,disp,paths, event, queue, font);
+						0.45,"Join Server")&&click){
+				join_server(config,disp,paths, event, queue, font);
 				back=true;
+			}
 			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.20,0.55,0.80,
-						0.80, screen_width,screen_height, config,
-						"Start Server")&&click){
-				track_menu(config, disp, event, queue, data_dir sep_str "tracks",
-					paths, font, start_server);
+						0.80, "Start Server")&&click){
+				track_menu(start_server);
 				back=true;
 			}
 
@@ -401,64 +384,7 @@ void multiplayer_menu(CONFIG* config, ALLEGRO_DISPLAY* disp, PATHS* paths, ALLEG
 		first=back;
 		back=false;
 		prev_mouse_down = mouse_down;
-		al_wait_for_event(queue,event);
+		al_wait_for_event(queue,&event);
 	}
 }
-
-void start_server(TRACK_DATA *track,char* filename,CONFIG* config, ALLEGRO_DISPLAY* disp, 
-		PATHS* paths,ALLEGRO_EVENT* event,ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
-	int server_socket , new_socket;
-	struct sockaddr_in server , client;
-	int max_sd;
-	int c;
-#ifdef __WIN32
-	WSADATA wsa;
-	if (WSAStartup(MAKEWORD(2,2),&wsa) != 0)
-	{
-		printf("Failed. Error Code : %d",WSAGetLastError());
-		return;
-	}
-	
-#else
-	//Otherwise a SIGPIPE signal would crash the program
-	sigaction(SIGPIPE, &(struct sigaction){SIG_IGN}, NULL);
-#endif
-	//Create a socket
-	if((server_socket = socket(AF_INET , SOCK_STREAM , 0 )) == -1)
-	{
-		error_message("creating socket");
-		return;
-	}
-	max_sd = server_socket;
-	
-	//Prepare the sockaddr_in structure
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons( 8888 );
-	
-	//Bind
-	if( bind(server_socket ,(struct sockaddr *)&server , sizeof(server)) == -1)
-	{
-		error_message("To bind");
-	}
-	
-
-	//Listen to incoming connections
-	listen(server_socket , 3);
-	
-	node_t sockets_head;
-	sockets_head.value = server_socket;
-	sockets_head.next = NULL;
-	
-	server_race(server_socket, max_sd, &sockets_head,
-			track,filename,config,disp,paths,event,
-			queue, font);
-	close(server_socket);
-#ifdef __WIN32
-	WSACleanup();
-#endif
-}
-
-
-
 // vim: cc=100

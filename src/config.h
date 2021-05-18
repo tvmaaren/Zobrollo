@@ -80,6 +80,8 @@ typedef struct{
 	ALLEGRO_COLOR button_text_color;
 
 }CONFIG;
-void get_config(CONFIG* config, const ALLEGRO_CONFIG* cfg);
+extern CONFIG config;
+void get_config(const ALLEGRO_CONFIG* cfg);
 _Bool get_config_bool(const ALLEGRO_CONFIG *config, const char *section, const char *key);
+
 // vim: cc=100

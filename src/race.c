@@ -25,7 +25,7 @@ e-mail:thomas.v.maaren@outlook.com
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_image.h>
 
-//networking and stuff
+//networking
 #ifdef _WIN32
 #include <winsock2.h>
 #else
@@ -40,6 +40,7 @@ e-mail:thomas.v.maaren@outlook.com
 #include <errno.h>
 #include <signal.h>
 
+#include "global.h"
 #include "networking.h"
 #include "drawtrack.h"
 #include "config.h"
@@ -74,11 +75,11 @@ void get_date_string(char* string){
 			local_time->tm_sec);
 }
 
-void store_record(char * filename, PATHS* paths, double stopwatch, char* date_string){
+void store_record(char * filename, double stopwatch, char* date_string){
 
 	//store the time the race was made in the 
 	//record file
-	al_change_directory(paths->record);
+	al_change_directory(paths.record);
 	ALLEGRO_FILE* record_file = al_fopen(filename, "a");
 	al_fputs(record_file,date_string);
 	char record_file_text[20];
@@ -87,14 +88,13 @@ void store_record(char * filename, PATHS* paths, double stopwatch, char* date_st
 	al_fputs(record_file, record_file_text);
 	al_fclose(record_file);
 }
-void store_ghost(char* filename, PATHS* paths,char* date_string, int frames, int fps, 
-		float*ghost_buf){
+void store_ghost(char* filename, char* date_string, int frames, int fps,float*ghost_buf){
 	//remove \n
 	date_string[date_string_len-1]='\0';
-	if(!al_change_directory(paths->ghost)){
-		al_make_directory(paths->ghost);
-		if(!al_change_directory(paths->ghost)){
-			fprintf(stderr,"Could not make directory: %s\n",paths->ghost);
+	if(!al_change_directory(paths.ghost)){
+		al_make_directory(paths.ghost);
+		if(!al_change_directory(paths.ghost)){
+			fprintf(stderr,"Could not make directory: %s\n",paths.ghost);
 			exit(1);
 		}
 	}
@@ -161,13 +161,12 @@ void recvtrack(TRACK_DATA* track, int socket){
 
 
 void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
-		TRACK_DATA *track, char* filename, 
-		CONFIG* config,ALLEGRO_DISPLAY* disp, PATHS *paths, ALLEGRO_EVENT* event, 
-		ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
+		TRACK_DATA *track, char* filename){
 
-	
+
+    ALLEGRO_FONT* font = al_create_builtin_font();
 	//timers
-	ALLEGRO_TIMER* timer = al_create_timer(1.0 / config->fps);
+	ALLEGRO_TIMER* timer = al_create_timer(1.0 / config.fps);
 	must_init(timer,"timer");
 	ALLEGRO_TIMER* countdown = al_create_timer(1);
 	must_init(countdown,"countdown");
@@ -176,7 +175,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 
 	must_init(font,"couldn't initialize font\n");
 
-	ALLEGRO_FONT* splash = al_load_ttf_font(config->font_name, 20, ALLEGRO_TTF_MONOCHROME);
+	ALLEGRO_FONT* splash = al_load_ttf_font(config.font_name, 20, ALLEGRO_TTF_MONOCHROME);
 
 	al_start_timer(timer);
 	al_start_timer(countdown);
@@ -216,8 +215,8 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 
 	float v=0;
 	kart.angle=M_PI/2;
-	float min_radius = sqrt(config->kart_height*config->kart_height/4+
-		pow(config->kart_height/tan(config->max_wheel_angle)+config->kart_width/2,2));
+	float min_radius = sqrt(config.kart_height*config.kart_height/4+
+		pow(config.kart_height/tan(config.max_wheel_angle)+config.kart_width/2,2));
 	float scale=1;
 	float track_angle;
 	float damage=0;
@@ -226,7 +225,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 	kart.x=0;
 	kart.y=0;
 
-	kart.color = config->kart_color;
+	kart.color = config.kart_color;
 
 	//keeps track in wich segment the kart is in.
 	//negative means outside the track
@@ -265,12 +264,12 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 			break;
 		case(NONE):
 			player_number=0;
-			if(!al_make_directory(paths->record)){
-				fprintf(stderr, "Error: Could not create \"%s\"\n",paths->record);
+			if(!al_make_directory(paths.record)){
+				fprintf(stderr, "Error: Could not create \"%s\"\n",paths.record);
 				exit(1);
 			}
-			if(!al_change_directory(paths->record)){
-				fprintf(stderr, "Error: Could not open \"%s\"\n",paths->record);
+			if(!al_change_directory(paths.record)){
+				fprintf(stderr, "Error: Could not open \"%s\"\n",paths.record);
 				exit(1);
 			}
 
@@ -284,13 +283,13 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 			    }
 			}
 
-			al_change_directory(paths->data);
+			al_change_directory(paths.data);
 			if(record_file)
 				am_records = load_record(record_file, &records, true);
 			al_fclose(record_file);
 			n_karts=1;
-			if(config->play_against_ghost){
-				al_change_directory(paths->ghost);
+			if(config.play_against_ghost){
+				al_change_directory(paths.ghost);
 				al_change_directory(filename);
 				int i =0;
 				while(i<am_records){
@@ -318,14 +317,14 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 					karts[1].color.a =kart.color.a/2;
 					n_karts=2;
 				}
-				al_change_directory(paths->data);
+				al_change_directory(paths.data);
 			}
 			break;
 
 	}
 
 	while(true){
-		al_wait_for_event(queue,event);
+		al_wait_for_event(queue,&event);
 
 		_Bool EndProgram=false;
 		_Bool redraw=false;
@@ -391,7 +390,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				ssize_t ret;
 				ret=send(socket->value,(void*) &net_n_karts, sizeof(uint16_t), 0);
 				if(ret <= 0){
-					error_message("to send n_karts\n");
+					error_message("to send n_karts");
 					del_node(prev_socket);
 					socket = prev_socket;
 					n_karts--;
@@ -402,7 +401,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				uint16_t net_i = htons(i);
 				ret = send(socket->value,(void*) &net_i, sizeof(uint16_t), 0);
 				if(ret <= 0){
-					error_message("to send player_number\n");
+					error_message("to send player_number");
 					del_node(prev_socket);
 					socket = prev_socket;
 					n_karts--;
@@ -412,7 +411,7 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 				karts[0] = kart;
 				ret = send(socket->value,(void*) karts, sizeof(kart_t)*n_karts,0);
 				if(ret <= 0){
-					error_message("to send player_number\n");
+					error_message("to send player_number");
 					del_node(prev_socket);
 					socket = prev_socket;
 					n_karts--;
@@ -466,13 +465,13 @@ endofwile:			prev_socket = socket;
 		}
 		
 		if(kart.mode==COUNTDOWN){
-			count_val = (int)(config->sec_before_start-al_get_timer_count(countdown));
+			count_val = (int)(config.sec_before_start-al_get_timer_count(countdown));
 			if( count_val<= 0){
 				kart.mode=PLAYING;
 				start_time = al_get_time();
 			}
 		}
-		switch(event->type){
+		switch(event.type){
 			case(ALLEGRO_EVENT_DISPLAY_RESIZE): 
 				al_acknowledge_resize(disp);
 				screen_height = al_get_display_height(disp);
@@ -486,31 +485,31 @@ endofwile:			prev_socket = socket;
 				break;
 			case(ALLEGRO_EVENT_TIMER):
 				//due to friction the speed decreases every frame
-				v=v/pow(config->speed_decrease, 1.0/(float)config->fps);
+				v=v/pow(config.speed_decrease, 1.0/(float)config.fps);
 				if(key[ALLEGRO_KEY_UP]&&kart.mode==PLAYING){
-					if(v>=0)v+=config->accelleration/config->fps;
-					if(v<0)v+=config->break_speed/config->fps;
+					if(v>=0)v+=config.accelleration/config.fps;
+					if(v<0)v+=config.break_speed/config.fps;
 				}
 				if(key[ALLEGRO_KEY_DOWN]&&kart.mode==PLAYING){
-					if(v>0)v-=config->break_speed/config->fps;
-					if(v<=0)v-=config->back_accelleration/config->fps;
+					if(v>0)v-=config.break_speed/config.fps;
+					if(v<=0)v-=config.back_accelleration/config.fps;
 				}
 				
 				
-				float radius = config->mass*v*v/config->max_F;
+				float radius = config.mass*v*v/config.max_F;
 				if(key[ALLEGRO_KEY_LEFT]&&kart.mode==PLAYING){
 					if(radius<min_radius)radius=min_radius;
-					kart.angle-=v/radius/config->fps;
+					kart.angle-=v/radius/config.fps;
 				}
 				if(key[ALLEGRO_KEY_RIGHT]&&kart.mode==PLAYING){
 					if(radius<min_radius)radius=min_radius;
-					kart.angle+=v/radius/config->fps;
+					kart.angle+=v/radius/config.fps;
 				}
 				if(key[ALLEGRO_KEY_EQUALS]){
-					scale*=pow(2,1/config->fps);
+					scale*=pow(2,1/config.fps);
 				}
 				if(key[ALLEGRO_KEY_MINUS]){
-					scale*=pow(2,-1/config->fps);
+					scale*=pow(2,-1/config.fps);
 				}
 
 				if(key[ALLEGRO_KEY_ESCAPE]){
@@ -524,8 +523,8 @@ endofwile:			prev_socket = socket;
 					i++;
 				}
 
-				float new_x_pos=kart.x+cos(kart.angle)*v/config->fps;
-				float new_y_pos=kart.y+sin(kart.angle)*v/config->fps;
+				float new_x_pos=kart.x+cos(kart.angle)*v/config.fps;
+				float new_y_pos=kart.y+sin(kart.angle)*v/config.fps;
 
 				int new_cur_segment=get_cur_segment(new_x_pos, new_y_pos,
 						&track_angle, cur_segment, track);
@@ -535,25 +534,24 @@ endofwile:			prev_socket = socket;
 							cur_segment==track->n_segments-1 && 
 							new_cur_segment==0){
 						lap++;
-						if(lap>config->laps){
+						if(lap>config.laps){
 							kart.mode=END;
 							if(connection==NONE){
 							
 							char date_string[date_string_len];
 							get_date_string(date_string);
-							store_record(filename,paths,stopwatch,
+							store_record(filename,stopwatch,
 									date_string);
 
 							//Store the ghost in a bin file at
 							//local_dir/ghosts/%trackname%/%time%.bin
-							if(config->save_ghost){
+							if(config.save_ghost){
 
 
-								store_ghost(filename, paths, 
-									date_string,frame,
-									config->fps, ghost_buf);
+								store_ghost(filename,date_string,frame,
+									config.fps, ghost_buf);
 							}
-							al_change_directory(paths->data);
+							al_change_directory(paths.data);
 							int frame_i = 0;
 							}else{
 								int i = 0;
@@ -584,7 +582,7 @@ endofwile:			prev_socket = socket;
 						kart.angle = 2*track_angle-kart.angle;
 					}
 					damage+=abs(v-v_new);
-					if(kart.mode==PLAYING && damage>=config->death_crash){
+					if(kart.mode==PLAYING && damage>=config.death_crash){
 
 						stopwatch=-1;
 						kart.mode=END;
@@ -596,7 +594,7 @@ endofwile:			prev_socket = socket;
 				redraw=true;
 				break;
 			case(ALLEGRO_EVENT_KEY_DOWN):
-				key[event->keyboard.keycode] = KEY_SEEN | KEY_RELEASED;
+				key[event.keyboard.keycode] = KEY_SEEN | KEY_RELEASED;
 				if(key[ALLEGRO_KEY_F11]){
 					//Toggle full screen
 					al_set_display_flag(disp, ALLEGRO_FULLSCREEN_WINDOW, 
@@ -616,7 +614,7 @@ endofwile:			prev_socket = socket;
 						
 				break;
 		    	case ALLEGRO_EVENT_KEY_UP:
-				key[event->keyboard.keycode] &= KEY_RELEASED;
+				key[event.keyboard.keycode] &= KEY_RELEASED;
 				break;
 			case(ALLEGRO_EVENT_DISPLAY_CLOSE):
 				exit(1);
@@ -643,17 +641,16 @@ endofwile:			prev_socket = socket;
 				n_karts=2;
 			}
 			karts[player_number]=kart;
-			drawframe(n_karts,player_number, karts, scale,screen_width,screen_height,
-					track, track_angle, config);
+			drawframe(n_karts,player_number, karts, scale,track, track_angle);
 			//Draw hearts
-			if(config->show_hearts){
+			if(config.show_hearts){
 				float heart_width = 10;
 				float heart_height = 10;
 				float heart_gap = 2;
 				int am_hearts = 
 					(int)ceil(
-						(config->death_crash-damage)
-						/config->life_per_heart
+						(config.death_crash-damage)
+						/config.life_per_heart
 					);
 
 				int heart_i=0;
@@ -679,57 +676,57 @@ endofwile:			prev_socket = socket;
 
 			char infotext[200];
 			infotext[0]='\0';
-			if(config->show_speed){
+			if(config.show_speed){
 				char speedtext[20];
 				sprintf(speedtext, "speed=%f, ", v);
 				strcat(infotext, speedtext);
 			}
-			if(config->show_kart_angle){
+			if(config.show_kart_angle){
 				char angletext[20];
 				sprintf(angletext, "angle=%f, ", kart.angle);
 				strcat(infotext, angletext);
 			}
-			if(config->show_scale){
+			if(config.show_scale){
 				char scaletext[20];
 				sprintf(scaletext, "scale=%f, ", scale);
 				strcat(infotext, scaletext);
 			}
-			if(config->show_track_angle){
+			if(config.show_track_angle){
 				char track_angletext[20];
 				sprintf(track_angletext, "angle=%f, ", track_angle);
 				strcat(infotext, track_angletext);
 			}
-			if(config->show_damage){
+			if(config.show_damage){
 				char damagetext[20];
 				sprintf(damagetext, "damage=%f, ", damage);
 				strcat(infotext, damagetext);
 			}
-			if(config->show_x_pos){
+			if(config.show_x_pos){
 				char x_postext[20];
 				sprintf(x_postext, "xpos=%f, ", kart.x);
 				strcat(infotext, x_postext);
 			}
-			if(config->show_y_pos){
+			if(config.show_y_pos){
 				char y_postext[20];
 				sprintf(y_postext, "ypos=%f, ", kart.y);
 				strcat(infotext, y_postext);
 			}
-			if(config->show_segment){
+			if(config.show_segment){
 				char segmenttext[20];
 				sprintf(segmenttext, "segment=%d, ", cur_segment);
 				strcat(infotext, segmenttext);
 			}
-			if(config->show_stopwatch){
+			if(config.show_stopwatch){
 				char timetext[20];
 				sprintf(timetext, "time=%s, ", SecToString(stopwatch));
 				strcat(infotext, timetext);
 			}
-			if(config->show_lap){
+			if(config.show_lap){
 				char lap_text[20];
 				sprintf(lap_text, "lap=%d, ", lap);
 				strcat(infotext, lap_text);
 			}
-			if(connection==NONE && config->show_record &&am_records>0){
+			if(connection==NONE && config.show_record &&am_records>0){
 				char recordtext[20];
 				sprintf(recordtext, "record=%s, ", 
 						SecToString(records[0].time));
@@ -776,24 +773,17 @@ endofwile:			prev_socket = socket;
 	
 }
 
-void singleplayer_race(TRACK_DATA *track, char* filename, CONFIG* config, ALLEGRO_DISPLAY* disp, 
-		PATHS *paths, ALLEGRO_EVENT* event, ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
-	race(NONE,0,0,NULL,track, filename, config, disp, paths, event, queue, font);
+void singleplayer_race(TRACK_DATA *track, char* filename){
+	race(NONE,0,0,NULL,track, filename);
 }
 
 void server_race(int server_socket, int max_sd, node_t*sockets_head,
-		TRACK_DATA *track, char* filename, CONFIG* config, 
-		ALLEGRO_DISPLAY* disp,PATHS *paths,ALLEGRO_EVENT* event,ALLEGRO_EVENT_QUEUE *queue,
-		ALLEGRO_FONT* font){
-	race(SERVER, server_socket, max_sd, sockets_head, track, 
-			filename, config,disp, paths, event, queue, font);
+		TRACK_DATA *track, char* filename){
+	race(SERVER, server_socket, max_sd, sockets_head, track, filename);
 }
 
-void connect_server_race(int client_socket, uint16_t player_number, 
-		CONFIG* config, ALLEGRO_DISPLAY* disp, 
-		PATHS *paths,ALLEGRO_EVENT* event, ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
-	race(CONNECT_TO_SERVER, client_socket,0,NULL,NULL,NULL,config, disp, 
-			paths, event,queue, font);
+void connect_server_race(int client_socket, uint16_t player_number){
+	race(CONNECT_TO_SERVER, client_socket,0,NULL,NULL,NULL);
 }
 
 

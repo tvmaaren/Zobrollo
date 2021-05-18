@@ -5,38 +5,39 @@
 
 #include <stdio.h>
 
+#include "global.h"
 #include "config.h"
 #include "gui.h"
 
 
 //returns true if the mouse is on this box
 _Bool handle_click_box(float mouse_x,float mouse_y,float x1,float y1,float x2,float y2,
-		CONFIG* config, char* text){
+		char* text){
 
 	_Bool ret= false;
-	al_draw_rectangle(x1,y1,x2,y2,config->button_border_color, config->button_border_thickness);
+	al_draw_rectangle(x1,y1,x2,y2,config.button_border_color, config.button_border_thickness);
 	if(mouse_x > x1 && mouse_y > y1 && mouse_x < x2 && mouse_y < y2){
 		ret=true;
-		al_draw_filled_rectangle(x1+config->button_border_thickness/2,
-                                         y1+config->button_border_thickness/2,
-				         x2-config->button_border_thickness/2,
-                                         y2-config->button_border_thickness/2,
+		al_draw_filled_rectangle(x1+config.button_border_thickness/2,
+                                         y1+config.button_border_thickness/2,
+				         x2-config.button_border_thickness/2,
+                                         y2-config.button_border_thickness/2,
                                          al_map_rgb(0,200,0));
 	}
-	draw_text(config->font_name, text, config->button_text_color, (x2+x1)/2, (y2+y1)/2, 
+	draw_text(config.font_name, text, config.button_text_color, (x2+x1)/2, (y2+y1)/2, 
 			x2-x1, y2-y1);
 	return ret;
 }
 
 //returns true if the mouse is on this box
 _Bool handle_click_box_relative(float mouse_x,float mouse_y,float x1frac,float y1frac,float x2frac,
-		float y2frac, int screen_width, int screen_height, CONFIG* config, char* text){
+		float y2frac, char* text){
 	float x1 = x1frac*screen_width;
 	float x2 = x2frac*screen_width;
 	float y1 = y1frac*screen_height;
 	float y2 = y2frac*screen_height;
 
-	return handle_click_box(mouse_x, mouse_y, x1, y1, x2, y2, config, text);
+	return handle_click_box(mouse_x, mouse_y, x1, y1, x2, y2, text);
 }
 
 void draw_text(const char* name, char* text, ALLEGRO_COLOR color, float x, 

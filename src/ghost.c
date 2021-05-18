@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "global.h"
 #include "config.h"
 #include "drawtrack.h"
 #include "misc.h"
@@ -13,8 +14,7 @@
 #include "kart.h"
 #include "drawframe.h"
 
-void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entry, 
-		CONFIG* config, ALLEGRO_DISPLAY* disp){
+void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entry){
 	//load the ghost file
 	ALLEGRO_FILE* ghost_file = al_open_fs_entry(ghost_file_entry, "rb");
 	
@@ -23,7 +23,7 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 
 	float fps;
        	al_fread(ghost_file, &fps, sizeof(fps));
-	ALLEGRO_TIMER* timer = al_create_timer(1.0 / config->fps);
+	ALLEGRO_TIMER* timer = al_create_timer(1.0 / config.fps);
 	must_init(timer,"timer");
 	al_start_timer(timer);
 
@@ -76,10 +76,10 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 				break;
 			case(ALLEGRO_EVENT_TIMER):
 				if(key[ALLEGRO_KEY_EQUALS]){
-					scale*=pow(2,1/config->fps);
+					scale*=pow(2,1/config.fps);
 				}
 				if(key[ALLEGRO_KEY_MINUS]){
-					scale*=pow(2,-1/config->fps);
+					scale*=pow(2,-1/config.fps);
 				}
 
 				if(key[ALLEGRO_KEY_ESCAPE]){
@@ -116,12 +116,12 @@ void play_ghost(ALLEGRO_FS_ENTRY *ghost_file_entry, ALLEGRO_FS_ENTRY *track_entr
 		float y = ghost_buf[i*3+2];
 		float angle = ghost_buf[i*3];
 		float track_angle;
-		if(config->camera_angle==RELATIVE_TO_TRACK){
+		if(config.camera_angle==RELATIVE_TO_TRACK){
 			segment = get_cur_segment(x, y, &track_angle, segment, &track);
 		}
 		kart_t kart = {ghost_buf[i*3],ghost_buf[i*3+1], ghost_buf[i*3+2], 
-			0,config->kart_color};
-		drawframe(1,0, &kart, scale, screen_width,screen_height,&track,track_angle,config);
+			0,config.kart_color};
+		drawframe(1,0, &kart, scale, &track,track_angle);
 		al_flip_display();
 		if(quit)
 			break;

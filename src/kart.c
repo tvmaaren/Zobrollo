@@ -24,29 +24,29 @@ e-mail:thomas.v.maaren@outlook.com
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_primitives.h>
 
+#include "global.h"
 #include "config.h"
 #include "kart.h"
 
 
-void drawkart(float x,float y, float angle, float scale, int width, int height, 
-		kart_t kart, CONFIG* config){
+void drawkart(float x,float y, float angle, float scale,kart_t kart){
 	ALLEGRO_TRANSFORM transform;
 	al_identity_transform(&transform);
 	al_translate_transform(&transform, -x,-y );
 	al_rotate_transform(&transform , angle);
 	al_scale_transform(&transform, scale,scale);
-	al_translate_transform(&transform, width/2,height/2);
+	al_translate_transform(&transform, screen_width/2,screen_height/2);
 	al_use_transform(&transform);
 
 	int i=0;
 	float points[8];
-	float point_distance = sqrt(config->kart_height*config->kart_height+config->kart_width*config->kart_width)/2;
+	float point_distance = sqrt(config.kart_height*config.kart_height+config.kart_width*config.kart_width)/2;
 	while(i<4){
 		float slope;
 		if(i%2==1)
-			slope=config->kart_height/config->kart_width;
+			slope=config.kart_height/config.kart_width;
 		else
-			slope=config->kart_width/config->kart_height;
+			slope=config.kart_width/config.kart_height;
 		double point_angle=-M_PI+atan(slope)+M_PI/2*i;
 		points[2*i]=cos(point_angle+kart.angle)*point_distance+kart.x;
 		points[2*i+1]=sin(point_angle+kart.angle)*point_distance+kart.y;

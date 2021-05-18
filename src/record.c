@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "global.h"
 #include "file_paths.h"
 #include "config.h"
 #include "misc.h"
@@ -53,19 +54,18 @@ int load_record(ALLEGRO_FILE* file, record** records,
 }
 
 
-void show_record(TRACK_DATA* track, char* filename, CONFIG* config, ALLEGRO_DISPLAY* disp, 
-		PATHS* paths, ALLEGRO_EVENT *event, ALLEGRO_EVENT_QUEUE *queue, ALLEGRO_FONT* font){
+void show_record(TRACK_DATA* track, char* filename){
 	
 	/*true: In the previuous frame the mouse was down
 	 *false:The mouse is up*/
 	_Bool prev_mouse_down = true;
 
-	al_change_directory(paths->record);
+	al_change_directory(paths.record);
 	ALLEGRO_FILE* file = al_fopen(filename, "r");
 	if(!file){
 		fprintf(stderr, "Could not open record file for track %s\n", filename);
 	}
-	al_change_directory(paths->data);
+	al_change_directory(paths.data);
 	record* records;
 	int am_records;
 	_Bool *has_replay_file;
@@ -76,7 +76,7 @@ void show_record(TRACK_DATA* track, char* filename, CONFIG* config, ALLEGRO_DISP
 
 		int i =0;
 		while(i<am_records){
-			al_change_directory(paths->ghost);
+			al_change_directory(paths.ghost);
 			al_change_directory(filename);
 			strcpy(ghost_filename, records[i].date);
 			strcat(ghost_filename, ".bin");
@@ -97,10 +97,10 @@ void show_record(TRACK_DATA* track, char* filename, CONFIG* config, ALLEGRO_DISP
 		if(mouse_down && !prev_mouse_down){
 			click =true;
 		}
-		switch(event->type){
+		switch(event.type){
 
 			case(ALLEGRO_EVENT_KEY_DOWN):
-				switch(event->keyboard.keycode){
+				switch(event.keyboard.keycode){
 					case(ALLEGRO_KEY_F11):
 						al_set_display_flag(disp, ALLEGRO_FULLSCREEN_WINDOW, 
 							!(_Bool)(al_get_display_flags(disp) & 
@@ -125,23 +125,22 @@ void show_record(TRACK_DATA* track, char* filename, CONFIG* config, ALLEGRO_DISP
 						0,"%s  %s", records[i].date,TimeToString(records[i].time));
 
 				if(has_replay_file[i]){
-					al_change_directory(paths->data);
+					al_change_directory(paths.data);
 					if(handle_click_box(mouse_state.x, mouse_state.y, 250, i*30, 
-							350, (i+1)*30, config, "Replay")&&click){
+							350, (i+1)*30, "Replay")&&click){
 
-						al_change_directory(paths->ghost);
+						al_change_directory(paths.ghost);
 						al_change_directory(filename);
 						strcpy(ghost_filename, records[i].date);
 						strcat(ghost_filename, ".bin");
 						ALLEGRO_FS_ENTRY * ghost_entry = 
 							al_create_fs_entry(ghost_filename);
-						al_change_directory(paths->data);
+						al_change_directory(paths.data);
 						al_change_directory("tracks");
 						ALLEGRO_FS_ENTRY * track_entry =
 							al_create_fs_entry(filename);
 						al_change_directory("..");
-						play_ghost(ghost_entry, track_entry,
-								config, disp);
+						play_ghost(ghost_entry, track_entry);
 						al_flush_event_queue(queue);
 						back_from_race=true;
 					}
@@ -156,7 +155,7 @@ void show_record(TRACK_DATA* track, char* filename, CONFIG* config, ALLEGRO_DISP
 		al_flip_display();
 		al_destroy_font(font);
 		if(!back_from_race)
-			al_wait_for_event(queue,event);
+			al_wait_for_event(queue,&event);
 	}
 }
 
