@@ -72,6 +72,7 @@ void show_record(TRACK_DATA* track, char* filename){
 	char ghost_filename[25];
 	if(file){
 		am_records = load_record(file, &records, true);
+		al_fclose(file);
 		has_replay_file = malloc(sizeof(_Bool)*am_records);
 
 		int i =0;

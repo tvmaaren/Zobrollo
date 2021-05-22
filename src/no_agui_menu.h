@@ -17,14 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 e-mail:thomas.v.maaren@outlook.com
 */
-
 #ifdef __cplusplus
-#define _Bool bool
 extern "C"{
 #endif
-_Bool SetSocketBlocking(int fd, _Bool blocking);
-void error_message(const char* text);
+void track_menu(void (*click_func)(TRACK_DATA *track,char* filename));
+void multiplayer_menu();
 #ifdef __cplusplus
 }
 #endif
-

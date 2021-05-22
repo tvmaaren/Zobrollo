@@ -165,9 +165,6 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 
 
     ALLEGRO_FONT* font = al_create_builtin_font();
-	//timers
-	ALLEGRO_TIMER* timer = al_create_timer(1.0 / config.fps);
-	must_init(timer,"timer");
 	ALLEGRO_TIMER* countdown = al_create_timer(1);
 	must_init(countdown,"countdown");
 
@@ -177,7 +174,6 @@ void race(CONNECTION connection,int my_socket,int max_sd, node_t *sockets_head,
 
 	ALLEGRO_FONT* splash = al_load_ttf_font(config.font_name, 20, ALLEGRO_TTF_MONOCHROME);
 
-	al_start_timer(timer);
 	al_start_timer(countdown);
 
     	al_register_event_source(queue, al_get_timer_event_source(timer));
@@ -761,7 +757,6 @@ endofwile:			prev_socket = socket;
 
 	
 	al_destroy_timer(countdown);
-	al_destroy_timer(timer);
 
 	al_destroy_font(splash);
 

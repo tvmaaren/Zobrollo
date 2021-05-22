@@ -4,8 +4,8 @@ LICENSEDIR ?= /usr/share/licenses
 BINDIR ?= ${PREFIX}/bin
 PLATFORM ?= linux
 
-OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/kart.o src/main.o src/misc.o src/race.o src/record.o src/networking.o src/join_server.o src/start_server.o 
-libs=-lagui -lagui_allegro5 -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image  
+OBJ =src/config.o src/display.o src/drawframe.o src/drawtrack.o src/ghost.o src/gui.o src/kart.o src/menu.o src/misc.o src/race.o src/record.o src/networking.o src/join_server.o src/start_server.o src/no_agui_menu.o
+libs=-lagui -lagui_allegro5 -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image
 
 
 CFLAGS= -g
@@ -29,7 +29,9 @@ default: zobrollo
 zobrollo: $(OBJ)
 	$(CXX) $(CFLAGS) $(OBJ) $(libs) -o $(executable)
 
-src/main.o: src/main.c src/config.o src/misc.o src/file_paths.h src/race.o src/record.o src/ghost.o src/gui.o src/join_server.o src/start_server.o src/networking.o src/drawtrack.o src/display.o src/file_paths.h
+
+src/menu.o: src/menu.cpp src/config.o src/misc.o src/file_paths.h src/race.o src/record.o src/ghost.o src/gui.o src/join_server.o src/start_server.o src/networking.o src/drawtrack.o src/display.o src/file_paths.h src/no_agui_menu.o
+src/no_agui_menu.o: src/networking.o src/config.o src/misc.o src/file_paths.h src/join_server.o src/ghost.o src/gui.o src/drawtrack.o src/start_server.o src/record.o src/race.o src/display.o 
 src/join_server.o: src/join_server.cpp src/misc.o src/networking.o src/config.o src/drawtrack.o src/race.o src/file_paths.h
 src/start_server.o: src/start_server.cpp src/misc.o src/networking.o src/config.o src/drawtrack.o src/race.o src/file_paths.h
 src/race.o: src/race.c src/drawtrack.o src/kart.o src/config.o src/file_paths.h src/misc.o src/record.o src/drawframe.o src/networking.o src/file_paths.h src/display.o
@@ -44,6 +46,9 @@ src/misc.o: src/misc.c
 src/display: src/display.c
 src/file_paths.h:
 src/networking.o: src/networking.c
+
+menu:
+	g++ src/menu.cpp -lagui -lagui_allegro5 -lallegro -lallegro_primitives -lm -lallegro_font -lallegro_ttf -lallegro_image 
 
 
 clean:

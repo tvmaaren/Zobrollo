@@ -18,7 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 e-mail:thomas.v.maaren@outlook.com
 */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -40,6 +39,7 @@ e-mail:thomas.v.maaren@outlook.com
 #include <arpa/inet.h>
 #endif
 
+#include "global.h"
 #include "networking.h"
 #include "config.h"
 #include "misc.h"
@@ -53,15 +53,6 @@ e-mail:thomas.v.maaren@outlook.com
 #include "race.h"
 #include "display.h"
 
-//Global variables
-
-ALLEGRO_EVENT event;
-ALLEGRO_DISPLAY* disp;
-int screen_width;
-int screen_height;
-ALLEGRO_EVENT_QUEUE* queue;
-PATHS paths;
-CONFIG config;
 
 
 typedef struct{
@@ -75,137 +66,6 @@ typedef struct{
 void track_menu(void (*click_func)(TRACK_DATA *track,char* filename));
 
 void multiplayer_menu();
-
-//void start_server(TRACK_DATA *track,char* filename);
-
-void main(){
-	//get directories
-	
-	paths.home= getenv(home_var);
-	
-	int home_path_len = strlen(paths.home);
-	
-	char record_path[home_path_len + sizeof(local_dir sep_str "records")];
-	strcpy(record_path, paths.home);
-	strcat(record_path, local_dir sep_str "records");
-	paths.record = record_path;
-	
-	char ghost_path[home_path_len + sizeof(local_dir sep_str "ghosts")];
-	strcpy(ghost_path, paths.home);
-	strcat(ghost_path, local_dir sep_str "ghosts");
-	paths.ghost = ghost_path;
-
-	al_change_directory(data_dir);
-	paths.data = al_get_current_directory();
-
-	/*true: In the previuous frame the mouse was down
-	 *false:The mouse is up*/
-	_Bool prev_mouse_down = false;
-	//initialize and check for errors
-	must_init(al_init(),"allegro");
-	
-	//Load configuration	
-	char config_path[home_path_len+sizeof(local_dir sep_str "config.cfg")];
-	strcpy(config_path, paths.home);
-
-	const ALLEGRO_CONFIG* cfg = al_load_config_file(
-			strcat(config_path,local_dir sep_str "config.cfg"));
-	if(!cfg){
-		cfg= al_load_config_file(data_dir sep_str "config.cfg");
-		if(!cfg){
-			fprintf(stderr, "Error: Could not find \"config.cfg\"\n");
-			exit(1);
-		}
-	}
-	get_config(cfg);
-	
-	
-	//initialize and check for errors
-	must_init(al_init(),"allegro");
-	must_init(al_install_keyboard(),"couldn't initialize keyboard\n");
-	must_init(al_init_primitives_addon(), "primitives");
-
-	//timers
-	ALLEGRO_TIMER* timer = al_create_timer(1.0 / 10);
-	must_init(timer,"timer");
-	al_start_timer(timer);
-	
-	must_init(al_init_image_addon(), "image");
-
-	queue = al_create_event_queue();
-	must_init(queue,"queue");
-
-	al_register_event_source(queue, al_get_keyboard_event_source());
-    	al_register_event_source(queue, al_get_timer_event_source(timer));
-    	
-	must_init(al_init_font_addon(), "font addon");
-	must_init(al_init_ttf_addon(), "ttf");
-	ALLEGRO_FONT* font =  al_create_builtin_font();
-	must_init(font, "builtin font");
-
-	if(font==NULL){
-		fprintf(stderr, "Could not load font\n");
-	}
-
-	al_set_new_display_flags(ALLEGRO_RESIZABLE|ALLEGRO_WINDOWED);
-	disp = al_create_display(config.window_width, config.window_height);
-	must_init(disp,"couldn't initialize display\n");
-    	al_register_event_source(queue, al_get_display_event_source(disp));
-
-	must_init(al_install_mouse(), "mouse");
-    	al_register_event_source(queue, al_get_mouse_event_source());
-
-	_Bool first = true;
-	_Bool back_from_race = false;
-
-	while(true){
-		al_acknowledge_resize(disp);
-		_Bool click = false;
-		_Bool EndProgram=false;
-		handle_display(first,font);
-		_Bool mouse_down;
-		if(first|al_is_event_queue_empty(queue)){
-			ALLEGRO_MOUSE_STATE mouse_state;
-			al_get_mouse_state(&mouse_state);
-			al_clear_to_color(al_map_rgb(0,0,0));
-			mouse_down = (_Bool)(mouse_state.buttons&0x1);
-			if(mouse_down && !prev_mouse_down)
-				click =true;
-
-
-			draw_text(config.font_name, "Zobrollo", al_map_rgb(255,255,255), 
-					0.5*screen_width, 0.2*screen_height, 0.8*screen_width, 
-					0.3*screen_height);
-			draw_text(config.font_name, "v"version, al_map_rgb(255,255,255), 
-					0.5*screen_width, 0.34*screen_height, 0.15*screen_width, 
-					0.1*screen_height);
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.3,0.42,0.7,0.55,
-						"Time Trial")&&click){
-				track_menu(singleplayer_race);
-			}
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y, 0.3,0.57,0.7,0.70,
-						"Multiplayer")&&click){
-				multiplayer_menu(&config, disp, &paths, &event, queue, font);
-			}
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.3,0.72,0.49,0.85,
-						"Records")&&
-					click){
-				
-				track_menu(show_record);
-
-			}
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.51,0.72,0.7,0.85,
-						"Quit")&&click){
-				exit(1);
-			}
-			al_flip_display();
-		}
-		al_wait_for_event(queue,&event);
-		prev_mouse_down = mouse_down;
-	}
-
-	al_shutdown_font_addon();
-}
 
 
 //Every file in the specified directory is an item in this menu
@@ -387,4 +247,3 @@ void multiplayer_menu(){
 		al_wait_for_event(queue,&event);
 	}
 }
-// vim: cc=100

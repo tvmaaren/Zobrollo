@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 void add_element(void** list, int *required, int *available, size_t element_size);
 void must_init(bool test, const char *description);
 char* get_filename(ALLEGRO_FS_ENTRY *e);
@@ -20,5 +24,8 @@ void del_node(node_t* node);
 //Adds a node after the specified node in the linked list and returns a pointer to that new node
 node_t* add_node(node_t* node);
 
+#ifdef __cplusplus
+}
+#endif
 
 // vim: cc=100
