@@ -286,7 +286,6 @@ int main(int argc, char *argv[]){
 			case ALLEGRO_EVENT_TIMER:
 				if(event.timer.source == timer)
 				{
-					printf("timer%d\n");
 					redraw = true;
 				}
 				
