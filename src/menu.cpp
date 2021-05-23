@@ -43,6 +43,8 @@ e-mail:thomas.v.maaren@outlook.com
 
 #define FRAME_RATE 60
 
+typedef enum{MAIN=0,MULTIPLAYER=1} GUI_I;
+
 //Globals
 ALLEGRO_DISPLAY *disp;
 ALLEGRO_TIMER *timer;
@@ -52,7 +54,7 @@ int screen_width;
 int screen_height;
 PATHS paths;
 CONFIG config;
-
+GUI_I gui_i;
 
 class time_trial_listener : 
 	public agui::ActionListener{
@@ -66,8 +68,7 @@ class multiplayer_listener :
 	public agui::ActionListener{
 		public:
 			virtual void actionPerformed(const agui::ActionEvent &evt){
-				multiplayer_menu();
-				al_flush_event_queue(queue);
+				gui_i = MULTIPLAYER;
 			}
 };
 class records_listener : 
@@ -85,11 +86,33 @@ class quit_listener :
 				exit(0);
 			}
 };
+class join_server_listener : 
+	public agui::ActionListener{
+		public:
+			virtual void actionPerformed(const agui::ActionEvent &evt){
+				join_server();
+			}
+};
+class start_server_listener : 
+	public agui::ActionListener{
+		public:
+			virtual void actionPerformed(const agui::ActionEvent &evt){
+				 track_menu(start_server);
+			}
+};
+class multiplayer_back_listener : 
+	public agui::ActionListener{
+		public:
+			virtual void actionPerformed(const agui::ActionEvent &evt){
+				gui_i = MAIN;
+			}
+};
 
 
 
 class WidgetCreator {
 private:
+	//main menu
 	agui::Button time_trial;
 	agui::Button multiplayer;
 	agui::Button records;
@@ -100,9 +123,19 @@ private:
 	records_listener recordsAL;
 	quit_listener quitAL;
 
-	agui::Gui* mGui;
+
+	//multiplayer menu
+	agui::Button join_server;
+	agui::Button start_server;
+	agui::Button multiplayer_back;
+
+	join_server_listener join_serverAL;
+	start_server_listener start_serverAL;
+	multiplayer_back_listener multiplayer_backAL;
+
 public:
 	void rel_location_pos(){
+		//main menu
 		time_trial.setLocation(	screen_width*0.3,	screen_height*0.42);
 		multiplayer.setLocation(screen_width*0.3,	screen_height*0.57);
 		records.setLocation(	screen_width*0.3,	screen_height*0.72);
@@ -112,13 +145,23 @@ public:
 		multiplayer.setSize(	screen_width*0.4,	screen_height*0.08);
 		records.setSize(	screen_width*0.19,	screen_height*0.08);
 		quit.setSize(		screen_width*0.19,	screen_height*0.08);
+
+		//multiplayer menu
+		join_server.setLocation(screen_width*0.2,	screen_height*0.2);
+		start_server.setLocation(screen_width*0.2,	screen_height*0.55);
+		multiplayer_back.setLocation(screen_width*0.05,	screen_height*0.9);
+
+		join_server.setSize(	screen_width*0.6,	screen_height*0.25);
+		start_server.setSize(	screen_width*0.6,	screen_height*0.25);
+		multiplayer_back.setSize(screen_width*0.1,	screen_height*0.05);
 	}
 
 	WidgetCreator(agui::Gui *gui){
-		gui->add(&time_trial);
-		gui->add(&multiplayer);
-		gui->add(&records);
-		gui->add(&quit);
+		//main menu
+		gui[0].add(&time_trial);
+		gui[0].add(&multiplayer);
+		gui[0].add(&records);
+		gui[0].add(&quit);
 
 
 		time_trial.setText("time trial");
@@ -137,6 +180,19 @@ public:
 		records.addActionListener(&recordsAL);
 		quit.addActionListener(&quitAL);
 
+
+		//multiplayer menu
+		gui[1].add(&join_server);
+		gui[1].add(&start_server);
+		gui[1].add(&multiplayer_back);
+		
+		join_server.setText("join server");
+		start_server.setText("start server");
+		multiplayer_back.setText("Back");
+
+		join_server.addActionListener(&join_serverAL);
+		start_server.addActionListener(&start_serverAL);
+		multiplayer_back.addActionListener(&multiplayer_backAL);
 
 		rel_location_pos();
 	}
@@ -201,9 +257,11 @@ int main(int argc, char *argv[]){
 	agui::Allegro5Input* inputHandler = new agui::Allegro5Input();
 	agui::Allegro5Graphics* graphicsHandler = new agui::Allegro5Graphics();
 	agui::Color::setPremultiplyAlpha(true);
-	agui::Gui *gui = new agui::Gui();
-	gui->setInput(inputHandler);
-	gui->setGraphics(graphicsHandler);
+	agui::Gui *gui = new agui::Gui[2]();
+	for(int i = 0; i<2; i++){
+		gui[i].setInput(inputHandler);
+		gui[i].setGraphics(graphicsHandler);
+	}
 	agui::Font *defaultFont= agui::Font::load(config.font_name,16);
 	agui::Widget::setGlobalFont(defaultFont);
 	// Start the event queue to handle keyboard input, mouse and our timer
@@ -220,7 +278,6 @@ int main(int argc, char *argv[]){
 	int i =0;
 
 	while(true) {
-		printf("%d\n",i);
 		_Bool redraw = false;
 		al_wait_for_event(queue, &event);
 		inputHandler->processEvent(event);
@@ -229,6 +286,7 @@ int main(int argc, char *argv[]){
 			case ALLEGRO_EVENT_TIMER:
 				if(event.timer.source == timer)
 				{
+					printf("timer%d\n");
 					redraw = true;
 				}
 				
@@ -240,28 +298,30 @@ int main(int argc, char *argv[]){
 				screen_height=al_get_display_height(disp);
 
 				creator->rel_location_pos();
-				gui->resizeToDisplay();
+				gui[gui_i].resizeToDisplay();
 				break;
 			case ALLEGRO_EVENT_DISPLAY_SWITCH_IN:
-				gui->resizeToDisplay();
+				gui[gui_i].resizeToDisplay();
 				break;
 			case ALLEGRO_EVENT_DISPLAY_CLOSE:
 				return 0;
 				break;
 		}
 		if (redraw && al_event_queue_is_empty(queue)) {
-			gui->logic();
-			al_clear_to_color(al_map_rgb(240,240,240));
-			gui->render();
+			gui[gui_i].logic();
+			al_clear_to_color(al_map_rgb(0,0,0));
+			gui[gui_i].render();
 			al_flip_display();
 		}
 		i++;
 	}
 
-	gui->getTop()->clear();
+	for(int i =0; i<2; i++){
+		gui[i].getTop()->clear();
+		delete &gui[i];
+	}
 	delete creator;
 	creator = NULL;
-	delete gui;
 	gui = NULL;
 	delete inputHandler;
 	delete graphicsHandler;
