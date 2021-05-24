@@ -56,6 +56,71 @@ PATHS paths;
 CONFIG config;
 GUI_I gui_i;
 
+class join_server_listener : public agui::ActionListener
+{
+public:
+	virtual void actionPerformed(const agui::ActionEvent &evt);
+};
+
+virtual void join_server_listener::actionPerformed(const agui::ActionEvent &evt){
+	agui::Button* button = dynamic_cast<agui::Button*>(evt.getSource());
+	if(button){
+		std::string join_ip_text;
+		std::string join_port_text;
+		creator->get_join_text(&join_ip_text, &join_port_text);
+		int port = std::stoi(join_port_text);
+		uint16_t player_number;
+		//connect to the server
+		int i = 0;
+		char server_ip[join_ip_text.size()+1];
+		while(i<join_ip_text.size()){
+			server_ip[i] = join_ip_text[i];
+			i++;
+		}
+		server_ip[i]='\0';
+#ifdef _WIN32
+		WSADATA wsa;
+		printf("Initialising winsock\n");
+		if(WSAStartup(0x0202, &wsa)){
+			error_message("Initialising winsock");
+			return;
+		}
+		printf("Winsock has been initialised\n");
+#endif
+
+		printf("Trying to connect to %s\n", server_ip);
+		int client_socket;
+		if((client_socket = socket(AF_INET, SOCK_STREAM,0))==-1){
+			error_message("to create socket");
+			return;
+		}
+		printf("Created socket %d\n",client_socket);
+		struct sockaddr_in server_address;
+		server_address.sin_family = AF_INET;
+		server_address.sin_port = htons(port);
+		server_address.sin_addr.s_addr = inet_addr(server_ip);
+		if(server_address.sin_addr.s_addr==INADDR_ANY)
+		{
+			fprintf(stderr, "Invalid IP address\n");
+			exit(1);
+		}
+		if(connect(client_socket, (struct sockaddr *)&server_address, 
+					sizeof(server_address))<0){
+			error_message("Connecting to the server");
+			return;
+		}
+		printf("connected\n");
+		if(!SetSocketBlocking(client_socket, 0)){
+			error_message("blocking socket");
+			return;
+		}
+		ALLEGRO_FONT* font;
+		connect_server_race(client_socket, player_number);
+		close(client_socket);
+		return;
+	}
+}
+
 class time_trial_listener : 
 	public agui::ActionListener{
 		public:
@@ -133,7 +198,18 @@ private:
 	start_server_listener start_serverAL;
 	multiplayer_back_listener multiplayer_backAL;
 
+	//join server menu
+	agui::TextField join_ip;
+	agui::TextField join_port;
+
 public:
+	void get_join_text(std::string* pjoin_ip,std::string* pjoin_port){
+		join_ip.selectAll();
+		*pjoin_ip = join_ip.getSelectedText();
+		join_port.selectAll();
+		*pjoin_port = join_port.getSelectedText();
+	}
+
 	void rel_location_pos(){
 		//main menu
 		time_trial.setLocation(	screen_width*0.3,	screen_height*0.42);
@@ -198,7 +274,6 @@ public:
 	}
 };
 
-WidgetCreator* creator;
 
 
 

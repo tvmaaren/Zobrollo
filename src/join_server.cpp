@@ -55,10 +55,6 @@ agui::Allegro5Graphics* join_graphicsHandler = NULL;
 agui::Font *join_defaultFont = NULL;
 std::string join_ip_text;
 std::string join_port_text;
-	
-agui::TextField* pjoin_ip_textField;
-agui::TextField* pjoin_port_textField;
-
 
 class join_SimpleActionListener : public agui::ActionListener
 {
