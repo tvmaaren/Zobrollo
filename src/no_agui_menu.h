@@ -21,7 +21,6 @@ e-mail:thomas.v.maaren@outlook.com
 extern "C"{
 #endif
 void track_menu(void (*click_func)(TRACK_DATA *track,char* filename));
-void multiplayer_menu();
 #ifdef __cplusplus
 }
 #endif

@@ -22,10 +22,19 @@ e-mail:thomas.v.maaren@outlook.com
 #include <Agui/Backends/Allegro5/Allegro5.hpp>
 
 #include <Agui/Widgets/Button/Button.hpp>
-#include <Agui/FlowLayout.hpp>
+#include <Agui/Widgets/TextField/TextField.hpp>
 
 #include <stdlib.h>
 #include <iostream>
+
+//networking
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
 
 #include "networking.h"
 #include "config.h"
@@ -43,7 +52,7 @@ e-mail:thomas.v.maaren@outlook.com
 
 #define FRAME_RATE 60
 
-typedef enum{MAIN=0,MULTIPLAYER=1} GUI_I;
+typedef enum{MAIN=0,MULTIPLAYER=1,JOIN=2} GUI_I;
 
 //Globals
 ALLEGRO_DISPLAY *disp;
@@ -56,70 +65,12 @@ PATHS paths;
 CONFIG config;
 GUI_I gui_i;
 
-class join_server_listener : public agui::ActionListener
+class connect_server_listener : public agui::ActionListener
 {
 public:
 	virtual void actionPerformed(const agui::ActionEvent &evt);
 };
 
-virtual void join_server_listener::actionPerformed(const agui::ActionEvent &evt){
-	agui::Button* button = dynamic_cast<agui::Button*>(evt.getSource());
-	if(button){
-		std::string join_ip_text;
-		std::string join_port_text;
-		creator->get_join_text(&join_ip_text, &join_port_text);
-		int port = std::stoi(join_port_text);
-		uint16_t player_number;
-		//connect to the server
-		int i = 0;
-		char server_ip[join_ip_text.size()+1];
-		while(i<join_ip_text.size()){
-			server_ip[i] = join_ip_text[i];
-			i++;
-		}
-		server_ip[i]='\0';
-#ifdef _WIN32
-		WSADATA wsa;
-		printf("Initialising winsock\n");
-		if(WSAStartup(0x0202, &wsa)){
-			error_message("Initialising winsock");
-			return;
-		}
-		printf("Winsock has been initialised\n");
-#endif
-
-		printf("Trying to connect to %s\n", server_ip);
-		int client_socket;
-		if((client_socket = socket(AF_INET, SOCK_STREAM,0))==-1){
-			error_message("to create socket");
-			return;
-		}
-		printf("Created socket %d\n",client_socket);
-		struct sockaddr_in server_address;
-		server_address.sin_family = AF_INET;
-		server_address.sin_port = htons(port);
-		server_address.sin_addr.s_addr = inet_addr(server_ip);
-		if(server_address.sin_addr.s_addr==INADDR_ANY)
-		{
-			fprintf(stderr, "Invalid IP address\n");
-			exit(1);
-		}
-		if(connect(client_socket, (struct sockaddr *)&server_address, 
-					sizeof(server_address))<0){
-			error_message("Connecting to the server");
-			return;
-		}
-		printf("connected\n");
-		if(!SetSocketBlocking(client_socket, 0)){
-			error_message("blocking socket");
-			return;
-		}
-		ALLEGRO_FONT* font;
-		connect_server_race(client_socket, player_number);
-		close(client_socket);
-		return;
-	}
-}
 
 class time_trial_listener : 
 	public agui::ActionListener{
@@ -155,7 +106,7 @@ class join_server_listener :
 	public agui::ActionListener{
 		public:
 			virtual void actionPerformed(const agui::ActionEvent &evt){
-				join_server();
+				gui_i = JOIN;
 			}
 };
 class start_server_listener : 
@@ -170,6 +121,13 @@ class multiplayer_back_listener :
 		public:
 			virtual void actionPerformed(const agui::ActionEvent &evt){
 				gui_i = MAIN;
+			}
+};
+class join_server_back_listener : 
+	public agui::ActionListener{
+		public:
+			virtual void actionPerformed(const agui::ActionEvent &evt){
+				gui_i = MULTIPLAYER;
 			}
 };
 
@@ -201,7 +159,11 @@ private:
 	//join server menu
 	agui::TextField join_ip;
 	agui::TextField join_port;
+	agui::Button connect_server;
+	agui::Button join_server_back;
 
+	connect_server_listener connect_serverAL;
+	join_server_back_listener join_server_backAL;
 public:
 	void get_join_text(std::string* pjoin_ip,std::string* pjoin_port){
 		join_ip.selectAll();
@@ -230,6 +192,17 @@ public:
 		join_server.setSize(	screen_width*0.6,	screen_height*0.25);
 		start_server.setSize(	screen_width*0.6,	screen_height*0.25);
 		multiplayer_back.setSize(screen_width*0.1,	screen_height*0.05);
+
+		//Join server menu
+		join_ip.setLocation(	screen_width*0.25,	screen_height*0.5-30);
+		join_port.setLocation(	screen_width*0.25,	screen_height*0.5+30);
+		connect_server.setLocation(screen_width*0.75, 	screen_height*0.75);
+		join_server_back.setLocation(screen_width*0.25-80,	screen_height*0.25);
+
+		join_ip.setSize(	screen_width*0.5,	25);
+		join_port.setSize(	screen_width*0.5,	25);
+		connect_server.setSize(80,40);
+		join_server_back.setSize(80,40);
 	}
 
 	WidgetCreator(agui::Gui *gui){
@@ -270,10 +243,81 @@ public:
 		start_server.addActionListener(&start_serverAL);
 		multiplayer_back.addActionListener(&multiplayer_backAL);
 
+
+		//join menu
+		gui[2].add(&join_ip);
+		gui[2].add(&join_port);
+		gui[2].add(&connect_server);
+		gui[2].add(&join_server_back);
+
+		join_port.setText("8888");
+		connect_server.setText("Connect");
+		join_server_back.setText("Back");
+
+		connect_server.addActionListener(&connect_serverAL);
+		join_server_back.addActionListener(&join_server_backAL);
+
 		rel_location_pos();
 	}
 };
 
+WidgetCreator* creator;
+
+void connect_server_listener::actionPerformed(const agui::ActionEvent &evt){
+	std::string join_ip_text;
+	std::string join_port_text;
+	creator->get_join_text(&join_ip_text, &join_port_text);
+	int port = std::stoi(join_port_text);
+	uint16_t player_number;
+	//connect to the server
+	int i = 0;
+	char server_ip[join_ip_text.size()+1];
+	while(i<join_ip_text.size()){
+		server_ip[i] = join_ip_text[i];
+		i++;
+	}
+	server_ip[i]='\0';
+#ifdef _WIN32
+	WSADATA wsa;
+	printf("Initialising winsock\n");
+	if(WSAStartup(0x0202, &wsa)){
+		error_message("Initialising winsock");
+		return;
+	}
+	printf("Winsock has been initialised\n");
+#endif
+
+	printf("Trying to connect to %s\n", server_ip);
+	int client_socket;
+	if((client_socket = socket(AF_INET, SOCK_STREAM,0))==-1){
+		error_message("to create socket");
+		return;
+	}
+	printf("Created socket %d\n",client_socket);
+	struct sockaddr_in server_address;
+	server_address.sin_family = AF_INET;
+	server_address.sin_port = htons(port);
+	server_address.sin_addr.s_addr = inet_addr(server_ip);
+	if(server_address.sin_addr.s_addr==INADDR_ANY)
+	{
+		fprintf(stderr, "Invalid IP address\n");
+		exit(1);
+	}
+	if(connect(client_socket, (struct sockaddr *)&server_address, 
+				sizeof(server_address))<0){
+		error_message("Connecting to the server");
+		return;
+	}
+	printf("connected\n");
+	if(!SetSocketBlocking(client_socket, 0)){
+		error_message("blocking socket");
+		return;
+	}
+	ALLEGRO_FONT* font;
+	connect_server_race(client_socket, player_number);
+	close(client_socket);
+	return;
+}
 
 
 
@@ -332,8 +376,8 @@ int main(int argc, char *argv[]){
 	agui::Allegro5Input* inputHandler = new agui::Allegro5Input();
 	agui::Allegro5Graphics* graphicsHandler = new agui::Allegro5Graphics();
 	agui::Color::setPremultiplyAlpha(true);
-	agui::Gui *gui = new agui::Gui[2]();
-	for(int i = 0; i<2; i++){
+	agui::Gui *gui = new agui::Gui[3]();
+	for(int i = 0; i<3; i++){
 		gui[i].setInput(inputHandler);
 		gui[i].setGraphics(graphicsHandler);
 	}
@@ -390,7 +434,7 @@ int main(int argc, char *argv[]){
 		i++;
 	}
 
-	for(int i =0; i<2; i++){
+	for(int i =0; i<3; i++){
 		gui[i].getTop()->clear();
 		delete &gui[i];
 	}

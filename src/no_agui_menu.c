@@ -65,9 +65,6 @@ typedef struct{
 
 void track_menu(void (*click_func)(TRACK_DATA *track,char* filename));
 
-void multiplayer_menu();
-
-
 //Every file in the specified directory is an item in this menu
 void track_menu(void (*click_func)(TRACK_DATA *track,char* filename)){
 
@@ -193,56 +190,6 @@ void track_menu(void (*click_func)(TRACK_DATA *track,char* filename)){
 		}
 		first=back_from_race;
 		back_from_race=false;
-		prev_mouse_down = mouse_down;
-		al_wait_for_event(queue,&event);
-	}
-}
-
-void multiplayer_menu(){
-
-	ALLEGRO_FONT* font = al_create_builtin_font();
-
-	/*true: In the previuous frame the mouse was down
-	 *false:The mouse is up*/
-	_Bool prev_mouse_down = true;
-	
-
-	_Bool first = true;
-	int screen_width; int screen_height;
-	_Bool back= false;
-	while(true){
-		_Bool click = false;
-		_Bool EndProgram=false;
-		_Bool redraw = false;
-		handle_display(first,font);
-		if(event.type == ALLEGRO_EVENT_KEY_DOWN 
-				&& event.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
-			return;
-		_Bool mouse_down;
-		if(first|al_is_event_queue_empty(queue)){
-			al_clear_to_color(al_map_rgb(0,0,0));
-			ALLEGRO_MOUSE_STATE mouse_state;
-			al_get_mouse_state(&mouse_state);
-			mouse_down = (_Bool)(mouse_state.buttons&0x1);
-			if(mouse_down && !prev_mouse_down){
-				click =true;
-			}
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.20,0.20,0.80,
-						0.45,"Join Server")&&click){
-				join_server(config,disp,paths, event, queue, font);
-				back=true;
-			}
-			if(handle_click_box_relative(mouse_state.x, mouse_state.y,0.20,0.55,0.80,
-						0.80, "Start Server")&&click){
-				track_menu(start_server);
-				back=true;
-			}
-
-			al_draw_text(font, al_map_rgb(255,255,255), 0, 0, 0, "Zobrollo v" version);
-			al_flip_display();
-		}
-		first=back;
-		back=false;
 		prev_mouse_down = mouse_down;
 		al_wait_for_event(queue,&event);
 	}
