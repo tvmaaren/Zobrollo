@@ -430,7 +430,8 @@ int main(int argc, char *argv[]){
 				screen_height=al_get_display_height(disp);
 
 				creator->rel_location_pos();
-				gui[gui_i].resizeToDisplay();
+				for(int i =0; i<3; i++)
+					gui[i].resizeToDisplay();
 				break;
 			case ALLEGRO_EVENT_DISPLAY_SWITCH_IN:
 				gui[gui_i].resizeToDisplay();
