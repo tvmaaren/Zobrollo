@@ -218,6 +218,13 @@ public:
 		records.setText("records");
 		quit.setText("quit");
 
+		agui::Color orange(255,128,0);
+		agui::Color white(255,255,255);
+		quit.setBackColor(orange);
+		multiplayer.setBackColor(orange);
+		records.setBackColor(orange);
+		time_trial.setBackColor(orange);
+
 
 		time_trial.resizeToContents();
 		multiplayer.resizeToContents();
@@ -239,6 +246,10 @@ public:
 		start_server.setText("start server");
 		multiplayer_back.setText("Back");
 
+		join_server.setBackColor(orange);
+		start_server.setBackColor(orange);
+		multiplayer_back.setBackColor(orange);
+
 		join_server.addActionListener(&join_serverAL);
 		start_server.addActionListener(&start_serverAL);
 		multiplayer_back.addActionListener(&multiplayer_backAL);
@@ -253,6 +264,9 @@ public:
 		join_port.setText("8888");
 		connect_server.setText("Connect");
 		join_server_back.setText("Back");
+
+		connect_server.setBackColor(orange);
+		join_server_back.setBackColor(orange);
 
 		connect_server.addActionListener(&connect_serverAL);
 		join_server_back.addActionListener(&join_server_backAL);
@@ -451,3 +465,5 @@ int main(int argc, char *argv[]){
 
 	return 0;
 }
+
+// vim: cc=100
