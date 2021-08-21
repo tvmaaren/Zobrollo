@@ -4,16 +4,6 @@ Zobrollo is a 2d minimalistic top-view racing game programmed in C using the All
 # Dependencies
 You first need to make sure you have allegro installed. In some cases you might have to compile this yourselve as well.
 
-# Setting up font
-You will probably need to change the location of the font, before you can run the game. This you do by changing line 1 of `config.cfg`. By default this is the location of the font.
-```shell
-/usr/share/fonts/TTF/DejaVuSansCondensed-Bold.ttf
-```
-This is where this font is stored on Arch Linux. It is probably in a different location on your OS. For Debian for example it is stored here.
-```shell
-/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf
-```
-
 # Compilation
 For GNU/Linux Go to the directory you extracted the source to and run.
 ```shell
