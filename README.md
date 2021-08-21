@@ -25,15 +25,6 @@ For other platforms. Go to the directory you extracted the source to and run mak
 # License
 This program is licensed under GPLv3.
 
-# To-do list
-<ol>
-	<li>Add more tracks.</li>
-	<li>Be able to race against each other on a local network. I already have a working test for this I just haven't properly implemented it yet.</li>
-	<li>Be able to race with anyone in the world. For this I will need to write server-side software.</li>
-	<li>Be able to change controls in config file</li>
-	<li>A settings menu.</li>
-</ol>
-
 # Screenshots
 
 The main menu
