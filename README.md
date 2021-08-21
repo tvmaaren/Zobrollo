@@ -12,13 +12,6 @@ sudo make install
 After this you should be able to run the game by typing the command zobrollo.
 For other platforms. Go to the directory you extracted the source to and run make. In the directory of the program an executable should appear. This you should run to play the game.
 
-# How to run
-On UNIX-like operating systems use;
-```shell
-./zobrollo
-```
-This should start the game. You should keep the file `zobrollo` in this directory as this is also the place where the tracks and sprites that the program uses are stored.
-
 # Controls
 `UP`		Accelerate
 `DOWN`		Break
