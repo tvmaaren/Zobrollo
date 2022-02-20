@@ -291,7 +291,6 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 							sprintf(record_file_text,"%f\n",stopwatch);
 							al_fputs(record_file, record_file_text);
 							al_fclose(record_file);
-							al_fclose(record_file);
 
 							//Store the ghost in a bin file at
 							//local_dir/ghosts/%trackname%/%time%.bin
@@ -547,7 +546,8 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 	al_destroy_font(font);
 
 
-	free(records);
+	if(records)
+		free(records);
 	if(found_ghost_file){
 		free(record_ghost_buf);
 	}
