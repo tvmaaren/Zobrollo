@@ -114,16 +114,17 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 
 	al_change_directory(paths->data);
 
-	record *records;
-	int am_records;
-	if(record_file)
+	record *records=NULL;
+	int am_records=0;
+	if(record_file){
 		am_records = load_record(record_file, &records, true);
-	al_fclose(record_file);
+		al_fclose(record_file);
+	}
 
 	//load ghost of the record
 	int frames_record;
 	float fps_record;
-	float* record_ghost_buf;
+	float* record_ghost_buf=NULL;
 	ALLEGRO_FILE* ghost_record_file;
 
 	int n_karts = 1;
@@ -136,6 +137,7 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 			char ghost_record_filename[strlen(records[i].date)+sizeof(".bin")];
 			strcpy(ghost_record_filename, records[i].date);
 			strcat(ghost_record_filename, ".bin");
+
 			
 			ghost_record_file = al_fopen(ghost_record_filename, "rb");
 			if(ghost_record_file){
@@ -546,8 +548,9 @@ void race(TRACK_DATA *track, char* filename, CONFIG* config,
 	al_destroy_font(font);
 
 
-	if(records)
+	if(records){
 		free(records);
+	}
 	if(found_ghost_file){
 		free(record_ghost_buf);
 	}
